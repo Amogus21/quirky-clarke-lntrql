@@ -1090,6 +1090,28 @@ export default function StudyPlan() {
   const [spReady, setSpReady] = useState(false);
   const spProgressRef = useRef(null);
 
+  // ─── SPOTIFY HELPERS ─────────────────────────────────────────────
+  const spLogin = async () => {
+    const verifier = spGenerateVerifier();
+    const challenge = await spChallenge(verifier);
+    localStorage.setItem("sp_verifier", verifier);
+    const params = new URLSearchParams({
+      client_id: SP_CLIENT_ID,
+      response_type: "code",
+      redirect_uri: SP_REDIRECT,
+      scope: SP_SCOPES,
+      code_challenge_method: "S256",
+      code_challenge: challenge,
+    });
+    window.location.href = `https://accounts.spotify.com/authorize?${params}`;
+  };
+
+  const spTogglePlay = async () => {
+    if (!spPlayer) return;
+    const state = await spPlayer.getCurrentState();
+    if (!state) return;
+    spPlayer.togglePlay();
+  };
   // Handle OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
