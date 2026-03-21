@@ -754,7 +754,7 @@ const tabs = [
 
 // ─── SPOTIFY ──────────────────────────────────────────────────────────────────
 const SP_CLIENT_ID = "2741ff4671b04fa3bfa8e5550369e0f7";
-const SP_REDIRECT = "https://pvjj4w-3000.csb.app";
+const SP_REDIRECT = "https://cheerful-cheesecake-8dde4f.netlify.app";
 const SP_SCOPES =
   "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative";
 
