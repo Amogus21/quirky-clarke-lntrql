@@ -3358,74 +3358,72 @@ export default function StudyPlan() {
                           </div>
                         </div>
                       </div>
-                      <div style={{ marginBottom: 12 }}>
+
+                      {/* Progress */}
+                      <div
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const pos = Math.floor(
+                            ((e.clientX - rect.left) / rect.width) * spDuration
+                          );
+                          setSpProgress(pos);
+                          spPlayer?.seek(pos);
+                        }}
+                        style={{
+                          height: 4,
+                          background: border1,
+                          borderRadius: 2,
+                          cursor: "pointer",
+                        }}
+                      >
                         <div
-                          onClick={(e) => {
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            const pos = Math.floor(
-                              ((e.clientX - rect.left) / rect.width) *
-                                spDuration
-                            );
-                            setSpProgress(pos);
-                            spPlayer?.seek(pos);
-                          }}
                           style={{
                             height: 4,
-                            background: border1,
+                            background: accentBg,
                             borderRadius: 2,
-                            cursor: "pointer",
+                            width: `${
+                              spDuration
+                                ? Math.min((spProgress / spDuration) * 100, 100)
+                                : 0
+                            }%`,
                           }}
-                        >
-                          <div
-                            style={{
-                              height: 4,
-                              background: accentBg,
-                              borderRadius: 2,
-                              width: `${
-                                spDuration
-                                  ? Math.min(
-                                      (spProgress / spDuration) * 100,
-                                      100
-                                    )
-                                  : 0
-                              }%`,
-                            }}
-                          />
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginTop: 4,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontFamily: mono,
-                              fontSize: 10,
-                              color: txt3,
-                            }}
-                          >
-                            {fmtTime(spProgress)}
-                          </span>
-                          <span
-                            style={{
-                              fontFamily: mono,
-                              fontSize: 10,
-                              color: txt3,
-                            }}
-                          >
-                            {fmtTime(spDuration)}
-                          </span>
-                        </div>
+                        />
                       </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginTop: 4,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: mono,
+                            fontSize: 10,
+                            color: txt3,
+                          }}
+                        >
+                          {fmtTime(spProgress)}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: mono,
+                            fontSize: 10,
+                            color: txt3,
+                          }}
+                        >
+                          {fmtTime(spDuration)}
+                        </span>
+                      </div>
+
+                      {/* Controls */}
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           gap: 12,
+                          marginTop: 12,
                           marginBottom: 16,
                         }}
                       >
@@ -3460,6 +3458,8 @@ export default function StudyPlan() {
                           ⏭
                         </button>
                       </div>
+
+                      {/* Volume */}
                       <div
                         style={{
                           display: "flex",
