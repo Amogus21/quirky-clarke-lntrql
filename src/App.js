@@ -3000,33 +3000,41 @@ export default function StudyPlan() {
               </svg>
             );
             const IconRepeat = ({ mode }) => (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={mode > 0 ? spGreen : txt3}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="17 1 21 5 17 9" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <polyline points="7 23 3 19 7 15" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              <div style={{ position: "relative", display: "inline-flex" }}>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={mode > 0 ? spGreen : txt3}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
                 {mode === 2 && (
-                  <text
-                    x="10"
-                    y="14"
-                    fontSize="7"
-                    fill={spGreen}
-                    stroke="none"
-                    fontWeight="bold"
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%,-50%)",
+                      fontSize: 7,
+                      fontWeight: 700,
+                      color: spGreen,
+                      lineHeight: 1,
+                      fontFamily: "sans-serif",
+                      pointerEvents: "none",
+                    }}
                   >
                     1
-                  </text>
+                  </span>
                 )}
-              </svg>
+              </div>
             );
             const IconVolume = () => (
               <svg
