@@ -384,7 +384,7 @@ const TODO_ITEMS = [
 const SP_CLIENT_ID = "2741ff4671b04fa3bfa8e5550369e0f7";
 const SP_REDIRECT = "https://cheerful-cheesecake-8dde4f.netlify.app";
 const SP_SCOPES =
-  "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative";
+  "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read";
 
 const spGenerateVerifier = () => {
   const arr = new Uint8Array(32);
@@ -891,28 +891,35 @@ export default function StudyPlan() {
       image: pl.images?.[0]?.url,
       uri: pl.uri,
       tracks: [],
+      error: null,
     });
     setSpLoadingPlaylist(true);
     const t = await getSpAccess();
     if (!t) return;
-    const res = await fetch(
+    // First try /tracks endpoint
+    let res = await fetch(
       `https://api.spotify.com/v1/playlists/${pl.id}/tracks?limit=50`,
       { headers: { Authorization: `Bearer ${t}` } }
     );
+    // If that fails, try full playlist endpoint
+    if (!res.ok)
+      res = await fetch(`https://api.spotify.com/v1/playlists/${pl.id}`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
     if (!res.ok) {
-      console.error("Playlist tracks failed:", res.status, await res.text());
+      const err = await res.text();
+      console.error("Playlist failed:", res.status, err);
+      setSpSelectedPlaylist((p) => ({
+        ...p,
+        error: `Error ${res.status}: ${err}`,
+      }));
       setSpLoadingPlaylist(false);
       return;
     }
     const data = await res.json();
-    console.log("Playlist raw response:", JSON.stringify(data).slice(0, 500));
-    const tracks = (data?.items || [])
-      .map((i) => {
-        console.log("item:", JSON.stringify(i).slice(0, 200));
-        return i?.track;
-      })
-      .filter((t) => t && t.id);
-    console.log("Parsed tracks:", tracks.length);
+    // Handle both response shapes: /tracks returns {items:[]} and /playlists returns {tracks:{items:[]}}
+    const rawItems = data?.items || data?.tracks?.items || [];
+    const tracks = rawItems.map((i) => i?.track || i).filter((t) => t && t.id);
     setSpSelectedPlaylist((p) => ({ ...p, tracks }));
     setSpLoadingPlaylist(false);
   };
@@ -1332,34 +1339,9 @@ export default function StudyPlan() {
     syncSet("gcse_tutor_logs", next);
   };
 
-  if (authLoading)
-    return (
-      <div
-        style={{
-          background: dark ? "#111" : "#fff",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "'Georgia',serif",
-          color: "#999",
-          fontSize: 13,
-        }}
-      >
-        Loading...
-      </div>
-    );
-  if (!session)
-    return (
-      <SignIn
-        onSession={(s) => {
-          ls.set("gcse_session", s);
-          setSession(s);
-        }}
-        dark={dark}
-        c={c}
-      />
-    );
+  if (authLoading) {
+  } // skip loading screen
+  // if (!session) return <SignIn onSession={s => { ls.set("gcse_session",s); setSession(s); }} dark={dark} c={c} />;
 
   const subjects = [
     "Biology",
@@ -3852,6 +3834,19 @@ export default function StudyPlan() {
                                   }}
                                 >
                                   Loading tracks…
+                                </div>
+                              )}
+                              {spSelectedPlaylist.error && (
+                                <div
+                                  style={{
+                                    fontFamily: sans,
+                                    fontSize: 13,
+                                    color: txt2,
+                                    padding: "20px 0",
+                                    lineHeight: "1.6",
+                                  }}
+                                >
+                                  ⚠ {spSelectedPlaylist.error}
                                 </div>
                               )}
 
