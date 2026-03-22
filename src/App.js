@@ -2638,17 +2638,99 @@ export default function StudyPlan() {
               <span style={{ fontFamily: serif, fontSize: 22, color: txt1 }}>
                 Tutor Log
               </span>
-              <button
-                onClick={() => setShowTutorForm((f) => !f)}
-                style={{
-                  ...pill(showTutorForm),
-                  padding: "7px 16px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                }}
-              >
-                {showTutorForm ? "Cancel" : "+ New Session"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => {
+                    if (tutorLogs.length === 0) return;
+                    const text = tutorLogs
+                      .map((l) =>
+                        [
+                          `=== ${l.date} — ${l.subject} ===`,
+                          `Covered: ${l.covered || ""}`,
+                          `Got wrong: ${l.mistakes || ""}`,
+                          `Revise: ${l.revise || ""}`,
+                        ].join("\n")
+                      )
+                      .join("\n\n");
+                    const blob = new Blob([text], { type: "text/plain" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `tutor-log-${getTodayKey()}.txt`;
+                    a.click();
+                  }}
+                  style={{ ...pill(false), fontSize: 11 }}
+                >
+                  Export .txt
+                </button>
+                <label
+                  style={{ ...pill(false), fontSize: 11, cursor: "pointer" }}
+                >
+                  Import .txt
+                  <input
+                    type="file"
+                    accept=".txt"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const text = ev.target.result;
+                        const sections = text.split(
+                          /\n=== (.+?) — (.+?) ===\n/
+                        );
+                        const imported = [];
+                        for (let i = 1; i < sections.length; i += 3) {
+                          const date = sections[i]?.trim();
+                          const subject = sections[i + 1]?.trim();
+                          const body = sections[i + 2] || "";
+                          const covered =
+                            (body.match(/Covered: (.*)/) || [])[1] || "";
+                          const mistakes =
+                            (body.match(/Got wrong: (.*)/) || [])[1] || "";
+                          const revise =
+                            (body.match(/Revise: (.*)/) || [])[1] || "";
+                          if (date && subject)
+                            imported.push({
+                              id: Date.now() + i,
+                              date,
+                              subject,
+                              covered,
+                              mistakes,
+                              revise,
+                            });
+                        }
+                        if (imported.length > 0) {
+                          const next = [...imported, ...tutorLogs];
+                          setTutorLogs(next);
+                          syncSet("gcse_tutor_logs", next);
+                          alert(
+                            `Imported ${imported.length} session${
+                              imported.length !== 1 ? "s" : ""
+                            }.`
+                          );
+                        } else {
+                          alert(
+                            "No sessions found. Make sure the file is in the correct format."
+                          );
+                        }
+                      };
+                      reader.readAsText(file);
+                    }}
+                    style={{ display: "none" }}
+                  />
+                </label>
+                <button
+                  onClick={() => setShowTutorForm((f) => !f)}
+                  style={{
+                    ...pill(showTutorForm),
+                    padding: "7px 16px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  {showTutorForm ? "Cancel" : "+ New Session"}
+                </button>
+              </div>
             </div>
             {showTutorForm && (
               <div style={{ ...card(), padding: 20, marginBottom: 16 }}>
@@ -2866,17 +2948,84 @@ export default function StudyPlan() {
               if (k && k.startsWith("gcse_notes_")) allNoteKeys.push(k);
             }
             allNoteKeys.sort().reverse();
+
+            const exportNotes = () => {
+              const data = {};
+              allNoteKeys.forEach((k) => {
+                const v = ls.get(k, "");
+                if (v) data[k.replace("gcse_notes_", "")] = v;
+              });
+              const text = Object.entries(data)
+                .map(([date, note]) => `=== ${date} ===\n${note}`)
+                .join("\n\n");
+              const blob = new Blob([text], { type: "text/plain" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = `study-notes-${getTodayKey()}.txt`;
+              a.click();
+            };
+
+            const importNotes = (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                const text = ev.target.result;
+                const sections = text.split(/\n=== (.+?) ===\n/);
+                let imported = 0;
+                for (let i = 1; i < sections.length; i += 2) {
+                  const date = sections[i]?.trim();
+                  const content = sections[i + 1]?.trim();
+                  if (date && content) {
+                    ls.set(`gcse_notes_${date}`, content);
+                    imported++;
+                  }
+                }
+                alert(
+                  `Imported ${imported} note${
+                    imported !== 1 ? "s" : ""
+                  }. Refresh to see them.`
+                );
+              };
+              reader.readAsText(file);
+            };
+
             return (
               <div style={{ maxWidth: 720 }}>
                 <div
                   style={{
-                    fontFamily: serif,
-                    fontSize: 22,
-                    color: txt1,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 4,
                   }}
                 >
-                  Notes
+                  <div style={{ fontFamily: serif, fontSize: 22, color: txt1 }}>
+                    Notes
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={exportNotes}
+                      style={{ ...pill(false), fontSize: 11 }}
+                    >
+                      Export .txt
+                    </button>
+                    <label
+                      style={{
+                        ...pill(false),
+                        fontSize: 11,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Import .txt
+                      <input
+                        type="file"
+                        accept=".txt"
+                        onChange={importNotes}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div
                   style={{
