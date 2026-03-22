@@ -681,6 +681,8 @@ export default function StudyPlan() {
   const [spRepeat, setSpRepeat] = useState(0); // 0=off 1=context 2=track
   const [spSearchTab, setSpSearchTab] = useState("tracks"); // tracks | playlists
   const [spPlaylists, setSpPlaylists] = useState([]);
+  const [spSelectedPlaylist, setSpSelectedPlaylist] = useState(null); // { id, name, tracks: [] }
+  const [spLoadingPlaylist, setSpLoadingPlaylist] = useState(false);
   const spProgressRef = useRef(null);
 
   useEffect(() => {
@@ -879,6 +881,48 @@ export default function StudyPlan() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ context_uri: uri }),
+      }
+    );
+  };
+  const spOpenPlaylist = async (pl) => {
+    setSpSelectedPlaylist({
+      id: pl.id,
+      name: pl.name,
+      image: pl.images?.[0]?.url,
+      uri: pl.uri,
+      tracks: [],
+    });
+    setSpLoadingPlaylist(true);
+    const t = await getSpAccess();
+    if (!t) return;
+    const res = await fetch(
+      `https://api.spotify.com/v1/playlists/${pl.id}/tracks?limit=50&fields=items(track(id,name,uri,duration_ms,artists,album(name,images)))`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    if (!res.ok) {
+      setSpLoadingPlaylist(false);
+      return;
+    }
+    const data = await res.json();
+    const tracks = (data?.items || []).map((i) => i.track).filter(Boolean);
+    setSpSelectedPlaylist((p) => ({ ...p, tracks }));
+    setSpLoadingPlaylist(false);
+  };
+  const spPlayFromPlaylist = async (playlistUri, trackUri) => {
+    const t = await getSpAccess();
+    if (!t || !spDeviceId) return;
+    await fetch(
+      `https://api.spotify.com/v1/me/player/play?device_id=${spDeviceId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${t}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          context_uri: playlistUri,
+          offset: { uri: trackUri },
+        }),
       }
     );
   };
@@ -1425,6 +1469,7 @@ export default function StudyPlan() {
               ["today", "Today"],
               ["tracker", "Topics"],
               ["tutor", "Tutor Log"],
+              ["notes", "Notes"],
               ["resources", "Resources"],
               ["motivation", "Motivation"],
               ["spotify", "♫ Spotify"],
@@ -1806,9 +1851,7 @@ export default function StudyPlan() {
                           marginBottom: 10,
                         }}
                       >
-                        S{n} —{" "}
-                        {DAILY_SCHEDULE.find((s) => s.task === `Session - ${n}`)
-                          ?.time || ""}
+                        Session {n}
                       </div>
                       <div
                         style={{ display: "flex", gap: 4, flexWrap: "wrap" }}
@@ -2649,6 +2692,128 @@ export default function StudyPlan() {
           </div>
         )}
 
+        {/* NOTES */}
+        {view === "notes" &&
+          (() => {
+            const allNoteKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith("gcse_notes_")) allNoteKeys.push(k);
+            }
+            allNoteKeys.sort().reverse();
+            return (
+              <div style={{ maxWidth: 720 }}>
+                <div
+                  style={{
+                    fontFamily: serif,
+                    fontSize: 22,
+                    color: txt1,
+                    marginBottom: 4,
+                  }}
+                >
+                  Notes
+                </div>
+                <div
+                  style={{
+                    fontFamily: sans,
+                    fontSize: 12,
+                    color: txt2,
+                    marginBottom: 20,
+                  }}
+                >
+                  Your daily study notes, most recent first.
+                </div>
+                {allNoteKeys.length === 0 && (
+                  <div
+                    style={{
+                      ...card(),
+                      padding: 40,
+                      textAlign: "center",
+                      color: txt3,
+                      fontFamily: sans,
+                      fontSize: 13,
+                    }}
+                  >
+                    No notes yet. Add them from the Today tab.
+                  </div>
+                )}
+                {allNoteKeys.map((k) => {
+                  const dateStr = k.replace("gcse_notes_", "");
+                  const val = ls.get(k, "");
+                  if (!val) return null;
+                  const [y, m, d] = dateStr.split("-").map(Number);
+                  const dateLabel = new Date(y, m - 1, d).toLocaleDateString(
+                    "en-GB",
+                    {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    }
+                  );
+                  const isToday = dateStr === getTodayKey();
+                  return (
+                    <div
+                      key={k}
+                      style={{
+                        ...card(),
+                        padding: 20,
+                        marginBottom: 10,
+                        borderLeft: isToday
+                          ? `3px solid ${accentBg}`
+                          : `3px solid ${border1}`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontFamily: sans,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: txt1,
+                          }}
+                        >
+                          {dateLabel}
+                        </div>
+                        {isToday && (
+                          <span
+                            style={{
+                              fontFamily: mono,
+                              fontSize: 9,
+                              color: accentBg,
+                              letterSpacing: "1.5px",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Today
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: sans,
+                          fontSize: 13,
+                          color: txt2,
+                          lineHeight: "1.7",
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {val}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
         {/* RESOURCES */}
         {view === "resources" && (
           <div
@@ -3410,88 +3575,424 @@ export default function StudyPlan() {
 
                       {spSearchTab === "playlists" && (
                         <div>
-                          {spPlaylists.length === 0 ? (
-                            <div
+                          {/* Back button when inside a playlist */}
+                          {spSelectedPlaylist && (
+                            <button
+                              onClick={() => setSpSelectedPlaylist(null)}
                               style={{
-                                textAlign: "center",
-                                color: txt3,
-                                fontFamily: sans,
-                                fontSize: 13,
-                                padding: "20px 0",
+                                ...pill(false),
+                                fontSize: 11,
+                                marginBottom: 14,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
                               }}
                             >
-                              Loading your playlists…
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "repeat(auto-fill,minmax(140px,1fr))",
-                                gap: 10,
-                              }}
-                            >
-                              {spPlaylists.map((pl) => (
-                                <div
-                                  key={pl.id}
-                                  onClick={() => spPlayPlaylist(pl.uri)}
-                                  style={{
-                                    background: surface2,
-                                    border: `1px solid ${border1}`,
-                                    borderRadius: 6,
-                                    padding: 10,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  {pl.images?.[0]?.url ? (
-                                    <img
-                                      src={pl.images[0].url}
-                                      alt=""
-                                      style={{
-                                        width: "100%",
-                                        aspectRatio: "1",
-                                        objectFit: "cover",
-                                        borderRadius: 4,
-                                        marginBottom: 8,
-                                        display: "block",
-                                      }}
-                                    />
-                                  ) : (
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke={txt2}
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="15 18 9 12 15 6" />
+                              </svg>
+                              Back to playlists
+                            </button>
+                          )}
+
+                          {/* Playlist grid */}
+                          {!spSelectedPlaylist &&
+                            (spPlaylists.length === 0 ? (
+                              <div
+                                style={{
+                                  textAlign: "center",
+                                  color: txt3,
+                                  fontFamily: sans,
+                                  fontSize: 13,
+                                  padding: "20px 0",
+                                }}
+                              >
+                                Loading your playlists…
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns:
+                                    "repeat(auto-fill,minmax(130px,1fr))",
+                                  gap: 10,
+                                }}
+                              >
+                                {spPlaylists.map((pl) => (
+                                  <div
+                                    key={pl.id}
+                                    onClick={() => spOpenPlaylist(pl)}
+                                    style={{
+                                      background: surface2,
+                                      border: `1px solid ${border1}`,
+                                      borderRadius: 6,
+                                      padding: 10,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    {pl.images?.[0]?.url ? (
+                                      <img
+                                        src={pl.images[0].url}
+                                        alt=""
+                                        style={{
+                                          width: "100%",
+                                          aspectRatio: "1",
+                                          objectFit: "cover",
+                                          borderRadius: 4,
+                                          marginBottom: 8,
+                                          display: "block",
+                                        }}
+                                      />
+                                    ) : (
+                                      <div
+                                        style={{
+                                          width: "100%",
+                                          aspectRatio: "1",
+                                          background: surface3,
+                                          borderRadius: 4,
+                                          marginBottom: 8,
+                                        }}
+                                      />
+                                    )}
                                     <div
                                       style={{
-                                        width: "100%",
-                                        aspectRatio: "1",
-                                        background: surface3,
-                                        borderRadius: 4,
-                                        marginBottom: 8,
+                                        fontFamily: sans,
+                                        fontSize: 11,
+                                        fontWeight: 500,
+                                        color: txt1,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
                                       }}
-                                    />
-                                  )}
+                                    >
+                                      {pl.name}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontFamily: sans,
+                                        fontSize: 10,
+                                        color: txt3,
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      {pl.tracks?.total} tracks
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+
+                          {/* Playlist track list */}
+                          {spSelectedPlaylist && (
+                            <div>
+                              {/* Playlist header */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 14,
+                                  marginBottom: 16,
+                                  paddingBottom: 14,
+                                  borderBottom: `1px solid ${border1}`,
+                                }}
+                              >
+                                {spSelectedPlaylist.image ? (
+                                  <img
+                                    src={spSelectedPlaylist.image}
+                                    alt=""
+                                    style={{
+                                      width: 56,
+                                      height: 56,
+                                      borderRadius: 4,
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: 56,
+                                      height: 56,
+                                      borderRadius: 4,
+                                      background: surface3,
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                )}
+                                <div>
                                   <div
                                     style={{
                                       fontFamily: sans,
-                                      fontSize: 12,
-                                      fontWeight: 500,
+                                      fontSize: 16,
+                                      fontWeight: 700,
                                       color: txt1,
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {pl.name}
+                                    {spSelectedPlaylist.name}
                                   </div>
                                   <div
                                     style={{
                                       fontFamily: sans,
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       color: txt3,
-                                      marginTop: 2,
+                                      marginTop: 3,
                                     }}
                                   >
-                                    {pl.tracks?.total} tracks
+                                    {spSelectedPlaylist.tracks.length} tracks
                                   </div>
                                 </div>
-                              ))}
+                                <button
+                                  onClick={() =>
+                                    spPlayPlaylist(spSelectedPlaylist.uri)
+                                  }
+                                  style={{
+                                    ...pill(true),
+                                    marginLeft: "auto",
+                                    padding: "7px 16px",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                  }}
+                                >
+                                  <svg
+                                    width="11"
+                                    height="11"
+                                    viewBox="0 0 24 24"
+                                    fill={accentTx}
+                                  >
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                  </svg>
+                                  Play all
+                                </button>
+                              </div>
+
+                              {/* Column headers */}
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns:
+                                    "28px 40px 1fr 80px 52px",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  padding: "0 8px 8px",
+                                  borderBottom: `1px solid ${border1}`,
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontFamily: mono,
+                                    fontSize: 10,
+                                    color: txt3,
+                                  }}
+                                >
+                                  #
+                                </span>
+                                <span />
+                                <span
+                                  style={{
+                                    fontFamily: sans,
+                                    fontSize: 10,
+                                    color: txt3,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "1px",
+                                  }}
+                                >
+                                  Title
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: sans,
+                                    fontSize: 10,
+                                    color: txt3,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "1px",
+                                  }}
+                                >
+                                  Album
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: mono,
+                                    fontSize: 10,
+                                    color: txt3,
+                                    textAlign: "right",
+                                  }}
+                                >
+                                  ⏱
+                                </span>
+                              </div>
+
+                              {spLoadingPlaylist && (
+                                <div
+                                  style={{
+                                    textAlign: "center",
+                                    color: txt3,
+                                    fontFamily: sans,
+                                    fontSize: 13,
+                                    padding: "20px 0",
+                                  }}
+                                >
+                                  Loading tracks…
+                                </div>
+                              )}
+
+                              {spSelectedPlaylist.tracks.map((track, i) => {
+                                const isPlaying = spTrack?.id === track.id;
+                                return (
+                                  <div
+                                    key={track.id + i}
+                                    onDoubleClick={() =>
+                                      spPlayFromPlaylist(
+                                        spSelectedPlaylist.uri,
+                                        track.uri
+                                      )
+                                    }
+                                    style={{
+                                      display: "grid",
+                                      gridTemplateColumns:
+                                        "28px 40px 1fr 80px 52px",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      padding: "6px 8px",
+                                      borderRadius: 4,
+                                      cursor: "pointer",
+                                      background: isPlaying
+                                        ? surface3
+                                        : "transparent",
+                                    }}
+                                  >
+                                    {/* Number / playing indicator */}
+                                    <span
+                                      style={{
+                                        fontFamily: mono,
+                                        fontSize: 11,
+                                        color: isPlaying
+                                          ? D
+                                            ? "#1db954"
+                                            : accentBg
+                                          : txt3,
+                                        textAlign: "right",
+                                      }}
+                                    >
+                                      {isPlaying && spPlaying ? (
+                                        <svg
+                                          width="10"
+                                          height="10"
+                                          viewBox="0 0 24 24"
+                                          fill={D ? "#1db954" : accentBg}
+                                        >
+                                          <rect
+                                            x="6"
+                                            y="4"
+                                            width="4"
+                                            height="16"
+                                            rx="1"
+                                          />
+                                          <rect
+                                            x="14"
+                                            y="4"
+                                            width="4"
+                                            height="16"
+                                            rx="1"
+                                          />
+                                        </svg>
+                                      ) : (
+                                        i + 1
+                                      )}
+                                    </span>
+                                    {/* Album art */}
+                                    {track.album?.images?.[2]?.url ? (
+                                      <img
+                                        src={track.album.images[2].url}
+                                        alt=""
+                                        style={{
+                                          width: 36,
+                                          height: 36,
+                                          borderRadius: 3,
+                                        }}
+                                      />
+                                    ) : (
+                                      <div
+                                        style={{
+                                          width: 36,
+                                          height: 36,
+                                          borderRadius: 3,
+                                          background: surface3,
+                                        }}
+                                      />
+                                    )}
+                                    {/* Title + artist */}
+                                    <div style={{ minWidth: 0 }}>
+                                      <div
+                                        style={{
+                                          fontFamily: sans,
+                                          fontSize: 13,
+                                          fontWeight: isPlaying ? 600 : 400,
+                                          color: isPlaying
+                                            ? D
+                                              ? "#1db954"
+                                              : accentBg
+                                            : txt1,
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {track.name}
+                                      </div>
+                                      <div
+                                        style={{
+                                          fontFamily: sans,
+                                          fontSize: 11,
+                                          color: txt3,
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {track.artists
+                                          ?.map((a) => a.name)
+                                          .join(", ")}
+                                      </div>
+                                    </div>
+                                    {/* Album */}
+                                    <div
+                                      style={{
+                                        fontFamily: sans,
+                                        fontSize: 11,
+                                        color: txt3,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {track.album?.name}
+                                    </div>
+                                    {/* Duration */}
+                                    <span
+                                      style={{
+                                        fontFamily: mono,
+                                        fontSize: 11,
+                                        color: txt3,
+                                        textAlign: "right",
+                                      }}
+                                    >
+                                      {fmtTime(track.duration_ms)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
