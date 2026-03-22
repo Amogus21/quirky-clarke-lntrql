@@ -900,11 +900,19 @@ export default function StudyPlan() {
       { headers: { Authorization: `Bearer ${t}` } }
     );
     if (!res.ok) {
+      console.error("Playlist tracks failed:", res.status, await res.text());
       setSpLoadingPlaylist(false);
       return;
     }
     const data = await res.json();
-    const tracks = (data?.items || []).map((i) => i.track).filter(Boolean);
+    console.log("Playlist raw response:", JSON.stringify(data).slice(0, 500));
+    const tracks = (data?.items || [])
+      .map((i) => {
+        console.log("item:", JSON.stringify(i).slice(0, 200));
+        return i?.track;
+      })
+      .filter((t) => t && t.id);
+    console.log("Parsed tracks:", tracks.length);
     setSpSelectedPlaylist((p) => ({ ...p, tracks }));
     setSpLoadingPlaylist(false);
   };
