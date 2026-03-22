@@ -2780,134 +2780,167 @@ export default function StudyPlan() {
         )}
 
         {/* SPOTIFY */}
-        {view === "spotify" && (
-          <div style={{ maxWidth: 760, margin: "0 auto" }}>
-            {!spToken ? (
-              <div style={{ ...card(), padding: 48, textAlign: "center" }}>
-                <div
-                  style={{
-                    fontFamily: serif,
-                    fontSize: 26,
-                    color: txt1,
-                    marginBottom: 10,
-                  }}
-                >
-                  Spotify
-                </div>
-                <div
-                  style={{
-                    fontFamily: sans,
-                    fontSize: 13,
-                    color: txt2,
-                    marginBottom: 28,
-                    lineHeight: "1.6",
-                  }}
-                >
-                  Connect your Spotify Premium account to play music directly in
-                  your study app.
-                </div>
-                <button
-                  onClick={spDoLogin}
-                  style={{
-                    ...pill(true),
-                    padding: "12px 32px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  Connect Spotify
-                </button>
-              </div>
-            ) : (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                {/* NOW PLAYING — Spotify bar style */}
-                <div
-                  style={{
-                    ...card(),
-                    padding: "16px 20px",
-                    background: D ? "#181818" : surface,
-                  }}
-                >
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 0 }}
-                  >
-                    {/* Left: album art + track info */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        flex: "0 0 220px",
-                        minWidth: 0,
-                      }}
-                    >
-                      {spTrack?.album?.images?.[2]?.url ? (
-                        <img
-                          src={spTrack.album.images[2].url}
-                          alt=""
-                          style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 4,
-                            flexShrink: 0,
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 4,
-                            background: surface3,
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontFamily: sans,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: txt1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {spTrack?.name || "Nothing playing"}
-                        </div>
-                        <div
-                          style={{
-                            fontFamily: sans,
-                            fontSize: 11,
-                            color: txt3,
-                            marginTop: 2,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {spTrack?.artists?.map((a) => a.name).join(", ") ||
-                            ""}
-                        </div>
-                      </div>
-                    </div>
+        {view === "spotify" &&
+          (() => {
+            const spGreen = "#1db954";
+            const iconBtn = (active) => ({
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: active ? spGreen : txt3,
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            });
 
-                    {/* Centre: controls + progress */}
+            // SVG icons
+            const IconShuffle = ({ active }) => (
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={active ? spGreen : txt3}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="16 3 21 3 21 8" />
+                <line x1="4" y1="20" x2="21" y2="3" />
+                <polyline points="21 16 21 21 16 21" />
+                <line x1="15" y1="15" x2="21" y2="21" />
+              </svg>
+            );
+            const IconPrev = () => (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={txt2}>
+                <polygon points="19 20 9 12 19 4 19 20" />
+                <line
+                  x1="5"
+                  y1="19"
+                  x2="5"
+                  y2="5"
+                  stroke={txt2}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            );
+            const IconNext = () => (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={txt2}>
+                <polygon points="5 4 15 12 5 20 5 4" />
+                <line
+                  x1="19"
+                  y1="5"
+                  x2="19"
+                  y2="19"
+                  stroke={txt2}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            );
+            const IconRepeat = ({ mode }) => (
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={mode > 0 ? spGreen : txt3}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="17 1 21 5 17 9" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <polyline points="7 23 3 19 7 15" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                {mode === 2 && (
+                  <text
+                    x="10"
+                    y="14"
+                    fontSize="7"
+                    fill={spGreen}
+                    stroke="none"
+                    fontWeight="bold"
+                  >
+                    1
+                  </text>
+                )}
+              </svg>
+            );
+            const IconVolume = () => (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={txt3}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+            );
+
+            return (
+              <div style={{ maxWidth: 760, margin: "0 auto" }}>
+                {!spToken ? (
+                  <div style={{ ...card(), padding: 48, textAlign: "center" }}>
                     <div
                       style={{
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "0 16px",
+                        fontFamily: serif,
+                        fontSize: 26,
+                        color: txt1,
+                        marginBottom: 10,
                       }}
                     >
-                      {/* Control buttons */}
+                      Spotify
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: sans,
+                        fontSize: 13,
+                        color: txt2,
+                        marginBottom: 28,
+                        lineHeight: "1.6",
+                      }}
+                    >
+                      Connect your Spotify Premium account to play music
+                      directly in your study app.
+                    </div>
+                    <button
+                      onClick={spDoLogin}
+                      style={{
+                        ...pill(true),
+                        padding: "12px 32px",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Connect Spotify
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    {/* NOW PLAYING BAR */}
+                    <div
+                      style={{
+                        ...card(),
+                        padding: "14px 20px",
+                        background: D ? "#181818" : surface,
+                      }}
+                    >
                       <div
                         style={{
                           display: "flex",
@@ -2915,484 +2948,560 @@ export default function StudyPlan() {
                           gap: 16,
                         }}
                       >
-                        {/* Shuffle */}
-                        <button
-                          onClick={spToggleShuffle}
-                          title="Shuffle"
+                        {/* Left: art + track info — allow it to grow and wrap */}
+                        <div
                           style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: spShuffle ? accentBg : txt3,
-                            fontSize: 16,
-                            padding: 0,
-                            lineHeight: 1,
-                          }}
-                        >
-                          ⇄
-                        </button>
-                        {/* Prev */}
-                        <button
-                          onClick={spPrev}
-                          title="Previous"
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: txt2,
-                            fontSize: 20,
-                            padding: 0,
-                            lineHeight: 1,
-                          }}
-                        >
-                          ⏮
-                        </button>
-                        {/* Play/Pause — big circle button */}
-                        <button
-                          onClick={spToggle}
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: "50%",
-                            background: accentBg,
-                            border: "none",
-                            cursor: "pointer",
-                            color: accentTx,
-                            fontSize: 14,
                             display: "flex",
                             alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
+                            gap: 12,
+                            flex: "0 0 auto",
+                            maxWidth: 260,
                           }}
                         >
-                          {spPlaying ? "⏸" : "▶"}
-                        </button>
-                        {/* Next */}
-                        <button
-                          onClick={spNext}
-                          title="Next"
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: txt2,
-                            fontSize: 20,
-                            padding: 0,
-                            lineHeight: 1,
-                          }}
-                        >
-                          ⏭
-                        </button>
-                        {/* Repeat */}
-                        <button
-                          onClick={spCycleRepeat}
-                          title="Repeat"
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: spRepeat > 0 ? accentBg : txt3,
-                            fontSize: 16,
-                            padding: 0,
-                            lineHeight: 1,
-                            position: "relative",
-                          }}
-                        >
-                          {spRepeat === 2 ? "🔂" : "🔁"}
-                          {spRepeat === 2 && (
-                            <span
+                          {spTrack?.album?.images?.[2]?.url ? (
+                            <img
+                              src={spTrack.album.images[2].url}
+                              alt=""
                               style={{
-                                position: "absolute",
-                                top: -4,
-                                right: -4,
-                                width: 6,
-                                height: 6,
-                                borderRadius: "50%",
-                                background: accentBg,
+                                width: 48,
+                                height: 48,
+                                borderRadius: 4,
+                                flexShrink: 0,
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 4,
+                                background: surface3,
+                                flexShrink: 0,
                               }}
                             />
                           )}
-                        </button>
-                      </div>
-                      {/* Progress bar */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          width: "100%",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: mono,
-                            fontSize: 10,
-                            color: txt3,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {fmtTime(spProgress)}
-                        </span>
+                          <div>
+                            <div
+                              style={{
+                                fontFamily: sans,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: txt1,
+                                lineHeight: "1.3",
+                              }}
+                            >
+                              {spTrack?.name || "Nothing playing"}
+                            </div>
+                            <div
+                              style={{
+                                fontFamily: sans,
+                                fontSize: 11,
+                                color: txt3,
+                                marginTop: 3,
+                              }}
+                            >
+                              {spTrack?.artists
+                                ?.map((a) => a.name)
+                                .join(", ") || ""}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Centre: controls + progress */}
                         <div
-                          onClick={(e) => {
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            const pos = Math.floor(
-                              ((e.clientX - rect.left) / rect.width) *
-                                spDuration
-                            );
-                            setSpProgress(pos);
-                            spPlayer?.seek(pos);
-                          }}
                           style={{
                             flex: 1,
-                            height: 4,
-                            background: border1,
-                            borderRadius: 2,
-                            cursor: "pointer",
-                            position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 8,
                           }}
                         >
                           <div
                             style={{
-                              position: "absolute",
-                              left: 0,
-                              top: 0,
-                              height: 4,
-                              background: accentBg,
-                              borderRadius: 2,
-                              width: `${
-                                spDuration
-                                  ? Math.min(
-                                      (spProgress / spDuration) * 100,
-                                      100
-                                    )
-                                  : 0
-                              }%`,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 20,
+                            }}
+                          >
+                            <button
+                              onClick={spToggleShuffle}
+                              style={iconBtn(spShuffle)}
+                            >
+                              <IconShuffle active={spShuffle} />
+                            </button>
+                            <button onClick={spPrev} style={iconBtn(false)}>
+                              <IconPrev />
+                            </button>
+
+                            {/* Play/Pause — proper circle with centered SVG icon */}
+                            <button
+                              onClick={spToggle}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                background: txt1,
+                                border: "none",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {spPlaying ? (
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill={D ? "#111" : "#fff"}
+                                >
+                                  <rect
+                                    x="6"
+                                    y="4"
+                                    width="4"
+                                    height="16"
+                                    rx="1"
+                                  />
+                                  <rect
+                                    x="14"
+                                    y="4"
+                                    width="4"
+                                    height="16"
+                                    rx="1"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill={D ? "#111" : "#fff"}
+                                  style={{ marginLeft: 2 }}
+                                >
+                                  <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                              )}
+                            </button>
+
+                            <button onClick={spNext} style={iconBtn(false)}>
+                              <IconNext />
+                            </button>
+                            <button
+                              onClick={spCycleRepeat}
+                              style={iconBtn(spRepeat > 0)}
+                            >
+                              <IconRepeat mode={spRepeat} />
+                            </button>
+                          </div>
+
+                          {/* Progress */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              width: "100%",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: mono,
+                                fontSize: 10,
+                                color: txt3,
+                                flexShrink: 0,
+                                minWidth: 32,
+                                textAlign: "right",
+                              }}
+                            >
+                              {fmtTime(spProgress)}
+                            </span>
+                            <div
+                              onClick={(e) => {
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                const pos = Math.floor(
+                                  ((e.clientX - rect.left) / rect.width) *
+                                    spDuration
+                                );
+                                setSpProgress(pos);
+                                spPlayer?.seek(pos);
+                              }}
+                              style={{
+                                flex: 1,
+                                height: 4,
+                                background: border1,
+                                borderRadius: 2,
+                                cursor: "pointer",
+                                position: "relative",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: 0,
+                                  top: 0,
+                                  height: 4,
+                                  background: D ? spGreen : accentBg,
+                                  borderRadius: 2,
+                                  width: `${
+                                    spDuration
+                                      ? Math.min(
+                                          (spProgress / spDuration) * 100,
+                                          100
+                                        )
+                                      : 0
+                                  }%`,
+                                }}
+                              />
+                            </div>
+                            <span
+                              style={{
+                                fontFamily: mono,
+                                fontSize: 10,
+                                color: txt3,
+                                flexShrink: 0,
+                                minWidth: 32,
+                              }}
+                            >
+                              {fmtTime(spDuration)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right: volume + disconnect */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          <IconVolume />
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={spVolume}
+                            onChange={(e) =>
+                              spSetVol(parseFloat(e.target.value))
+                            }
+                            style={{
+                              width: 72,
+                              accentColor: D ? spGreen : txt1,
+                              cursor: "pointer",
                             }}
                           />
+                          <button
+                            onClick={spLogout}
+                            title="Disconnect"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: txt3,
+                              fontSize: 18,
+                              marginLeft: 6,
+                              lineHeight: 1,
+                              padding: 0,
+                            }}
+                          >
+                            ×
+                          </button>
                         </div>
-                        <span
+                      </div>
+                      {!spReady && (
+                        <div
                           style={{
                             fontFamily: mono,
                             fontSize: 10,
                             color: txt3,
-                            flexShrink: 0,
+                            marginTop: 10,
+                            textAlign: "center",
                           }}
                         >
-                          {fmtTime(spDuration)}
-                        </span>
-                      </div>
+                          Connecting player…
+                        </div>
+                      )}
                     </div>
 
-                    {/* Right: volume */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        flex: "0 0 140px",
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <span style={{ fontSize: 13, color: txt3 }}>🔈</span>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={spVolume}
-                        onChange={(e) => spSetVol(parseFloat(e.target.value))}
-                        style={{
-                          width: 80,
-                          accentColor: D ? "#1db954" : "#1a1a1a",
-                          cursor: "pointer",
-                        }}
-                      />
-                      <button
-                        onClick={spLogout}
-                        title="Disconnect"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: txt3,
-                          fontSize: 11,
-                          fontFamily: sans,
-                          marginLeft: 4,
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-
-                  {!spReady && (
-                    <div
-                      style={{
-                        fontFamily: mono,
-                        fontSize: 10,
-                        color: txt3,
-                        textAlign: "center",
-                        marginTop: 10,
-                      }}
-                    >
-                      ○ Connecting player…
-                    </div>
-                  )}
-                </div>
-
-                {/* SEARCH + PLAYLISTS tabs */}
-                <div style={{ ...card(), padding: 20 }}>
-                  <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
-                    <button
-                      onClick={() => setSpSearchTab("tracks")}
-                      style={{
-                        ...pill(spSearchTab === "tracks"),
-                        fontSize: 11,
-                      }}
-                    >
-                      Search Tracks
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSpSearchTab("playlists");
-                        if (spPlaylists.length === 0) spLoadPlaylists();
-                      }}
-                      style={{
-                        ...pill(spSearchTab === "playlists"),
-                        fontSize: 11,
-                      }}
-                    >
-                      My Playlists
-                    </button>
-                  </div>
-
-                  {spSearchTab === "tracks" && (
-                    <div>
+                    {/* SEARCH + PLAYLISTS */}
+                    <div style={{ ...card(), padding: 20 }}>
                       <div
-                        style={{ display: "flex", gap: 8, marginBottom: 12 }}
+                        style={{ display: "flex", gap: 4, marginBottom: 16 }}
                       >
-                        <input
-                          value={spSearch}
-                          onChange={(e) => setSpSearch(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" && spSearchTracks(spSearch)
-                          }
-                          placeholder="Search songs, artists, albums…"
-                          style={{
-                            flex: 1,
-                            background: surface2,
-                            border: `1px solid ${border1}`,
-                            borderRadius: 20,
-                            padding: "8px 16px",
-                            fontSize: 13,
-                            fontFamily: sans,
-                            color: txt1,
-                            outline: "none",
-                          }}
-                        />
                         <button
-                          onClick={() => spSearchTracks(spSearch)}
+                          onClick={() => setSpSearchTab("tracks")}
                           style={{
-                            ...pill(true),
-                            padding: "8px 18px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            borderRadius: 20,
+                            ...pill(spSearchTab === "tracks"),
+                            fontSize: 11,
                           }}
                         >
-                          {spSearching ? "…" : "Search"}
+                          Search Tracks
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSpSearchTab("playlists");
+                            if (spPlaylists.length === 0) spLoadPlaylists();
+                          }}
+                          style={{
+                            ...pill(spSearchTab === "playlists"),
+                            fontSize: 11,
+                          }}
+                        >
+                          My Playlists
                         </button>
                       </div>
-                      {spResults.length > 0 && (
-                        <div>
-                          {spResults.map((track, i) => (
-                            <div
-                              key={track.id}
-                              onClick={() => spPlayTrack(track.uri)}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 12,
-                                padding: "8px 10px",
-                                borderRadius: 4,
-                                cursor: "pointer",
-                                background:
-                                  spTrack?.id === track.id
-                                    ? surface3
-                                    : "transparent",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontFamily: mono,
-                                  fontSize: 11,
-                                  color: txt3,
-                                  width: 16,
-                                  textAlign: "right",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {spTrack?.id === track.id && spPlaying
-                                  ? "▶"
-                                  : i + 1}
-                              </span>
-                              {track.album?.images?.[2]?.url && (
-                                <img
-                                  src={track.album.images[2].url}
-                                  alt=""
-                                  style={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 3,
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              )}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                  style={{
-                                    fontFamily: sans,
-                                    fontSize: 13,
-                                    fontWeight:
-                                      spTrack?.id === track.id ? 600 : 400,
-                                    color:
-                                      spTrack?.id === track.id
-                                        ? accentBg
-                                        : txt1,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {track.name}
-                                </div>
-                                <div
-                                  style={{
-                                    fontFamily: sans,
-                                    fontSize: 11,
-                                    color: txt3,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {track.artists?.map((a) => a.name).join(", ")}{" "}
-                                  · {track.album?.name}
-                                </div>
-                              </div>
-                              <span
-                                style={{
-                                  fontFamily: mono,
-                                  fontSize: 11,
-                                  color: txt3,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {fmtTime(track.duration_ms)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
-                  {spSearchTab === "playlists" && (
-                    <div>
-                      {spPlaylists.length === 0 ? (
-                        <div
-                          style={{
-                            textAlign: "center",
-                            color: txt3,
-                            fontFamily: sans,
-                            fontSize: 13,
-                            padding: "20px 0",
-                          }}
-                        >
-                          Loading your playlists…
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fill,minmax(140px,1fr))",
-                            gap: 10,
-                          }}
-                        >
-                          {spPlaylists.map((pl) => (
-                            <div
-                              key={pl.id}
-                              onClick={() => spPlayPlaylist(pl.uri)}
+                      {spSearchTab === "tracks" && (
+                        <div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              marginBottom: 12,
+                            }}
+                          >
+                            <input
+                              value={spSearch}
+                              onChange={(e) => setSpSearch(e.target.value)}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && spSearchTracks(spSearch)
+                              }
+                              placeholder="Search songs, artists, albums…"
                               style={{
+                                flex: 1,
                                 background: surface2,
                                 border: `1px solid ${border1}`,
-                                borderRadius: 6,
-                                padding: 10,
-                                cursor: "pointer",
-                                transition: "background 0.1s",
+                                borderRadius: 20,
+                                padding: "8px 16px",
+                                fontSize: 13,
+                                fontFamily: sans,
+                                color: txt1,
+                                outline: "none",
+                              }}
+                            />
+                            <button
+                              onClick={() => spSearchTracks(spSearch)}
+                              style={{
+                                ...pill(true),
+                                padding: "8px 18px",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                borderRadius: 20,
                               }}
                             >
-                              {pl.images?.[0]?.url ? (
-                                <img
-                                  src={pl.images[0].url}
-                                  alt=""
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "1",
-                                    objectFit: "cover",
-                                    borderRadius: 4,
-                                    marginBottom: 8,
-                                    display: "block",
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "1",
-                                    background: surface3,
-                                    borderRadius: 4,
-                                    marginBottom: 8,
-                                  }}
-                                />
-                              )}
+                              {spSearching ? "…" : "Search"}
+                            </button>
+                          </div>
+                          {spResults.length > 0 &&
+                            spResults.map((track, i) => (
                               <div
+                                key={track.id}
+                                onClick={() => spPlayTrack(track.uri)}
                                 style={{
-                                  fontFamily: sans,
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  color: txt1,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 12,
+                                  padding: "8px 10px",
+                                  borderRadius: 4,
+                                  cursor: "pointer",
+                                  background:
+                                    spTrack?.id === track.id
+                                      ? surface3
+                                      : "transparent",
                                 }}
                               >
-                                {pl.name}
+                                <span
+                                  style={{
+                                    fontFamily: mono,
+                                    fontSize: 11,
+                                    color: txt3,
+                                    width: 18,
+                                    textAlign: "right",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {spTrack?.id === track.id && spPlaying ? (
+                                    <svg
+                                      width="11"
+                                      height="11"
+                                      viewBox="0 0 24 24"
+                                      fill={spGreen}
+                                    >
+                                      <rect
+                                        x="6"
+                                        y="4"
+                                        width="4"
+                                        height="16"
+                                        rx="1"
+                                      />
+                                      <rect
+                                        x="14"
+                                        y="4"
+                                        width="4"
+                                        height="16"
+                                        rx="1"
+                                      />
+                                    </svg>
+                                  ) : (
+                                    i + 1
+                                  )}
+                                </span>
+                                {track.album?.images?.[2]?.url && (
+                                  <img
+                                    src={track.album.images[2].url}
+                                    alt=""
+                                    style={{
+                                      width: 36,
+                                      height: 36,
+                                      borderRadius: 3,
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div
+                                    style={{
+                                      fontFamily: sans,
+                                      fontSize: 13,
+                                      fontWeight:
+                                        spTrack?.id === track.id ? 600 : 400,
+                                      color:
+                                        spTrack?.id === track.id
+                                          ? D
+                                            ? spGreen
+                                            : accentBg
+                                          : txt1,
+                                    }}
+                                  >
+                                    {track.name}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontFamily: sans,
+                                      fontSize: 11,
+                                      color: txt3,
+                                    }}
+                                  >
+                                    {track.artists
+                                      ?.map((a) => a.name)
+                                      .join(", ")}{" "}
+                                    · {track.album?.name}
+                                  </div>
+                                </div>
+                                <span
+                                  style={{
+                                    fontFamily: mono,
+                                    fontSize: 11,
+                                    color: txt3,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {fmtTime(track.duration_ms)}
+                                </span>
                               </div>
-                              <div
-                                style={{
-                                  fontFamily: sans,
-                                  fontSize: 10,
-                                  color: txt3,
-                                  marginTop: 2,
-                                }}
-                              >
-                                {pl.tracks?.total} tracks
-                              </div>
+                            ))}
+                        </div>
+                      )}
+
+                      {spSearchTab === "playlists" && (
+                        <div>
+                          {spPlaylists.length === 0 ? (
+                            <div
+                              style={{
+                                textAlign: "center",
+                                color: txt3,
+                                fontFamily: sans,
+                                fontSize: 13,
+                                padding: "20px 0",
+                              }}
+                            >
+                              Loading your playlists…
                             </div>
-                          ))}
+                          ) : (
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "repeat(auto-fill,minmax(140px,1fr))",
+                                gap: 10,
+                              }}
+                            >
+                              {spPlaylists.map((pl) => (
+                                <div
+                                  key={pl.id}
+                                  onClick={() => spPlayPlaylist(pl.uri)}
+                                  style={{
+                                    background: surface2,
+                                    border: `1px solid ${border1}`,
+                                    borderRadius: 6,
+                                    padding: 10,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {pl.images?.[0]?.url ? (
+                                    <img
+                                      src={pl.images[0].url}
+                                      alt=""
+                                      style={{
+                                        width: "100%",
+                                        aspectRatio: "1",
+                                        objectFit: "cover",
+                                        borderRadius: 4,
+                                        marginBottom: 8,
+                                        display: "block",
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      style={{
+                                        width: "100%",
+                                        aspectRatio: "1",
+                                        background: surface3,
+                                        borderRadius: 4,
+                                        marginBottom: 8,
+                                      }}
+                                    />
+                                  )}
+                                  <div
+                                    style={{
+                                      fontFamily: sans,
+                                      fontSize: 12,
+                                      fontWeight: 500,
+                                      color: txt1,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {pl.name}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontFamily: sans,
+                                      fontSize: 10,
+                                      color: txt3,
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    {pl.tracks?.total} tracks
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            );
+          })()}
       </div>
 
       <div
