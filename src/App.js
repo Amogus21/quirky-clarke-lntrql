@@ -896,31 +896,29 @@ export default function StudyPlan() {
     setSpLoadingPlaylist(true);
     const t = await getSpAccess();
     if (!t) return;
-    // First try /tracks endpoint
-    let res = await fetch(
-      `https://api.spotify.com/v1/playlists/${pl.id}/tracks?limit=50`,
-      { headers: { Authorization: `Bearer ${t}` } }
-    );
-    // If that fails, try full playlist endpoint
-    if (!res.ok)
-      res = await fetch(`https://api.spotify.com/v1/playlists/${pl.id}`, {
-        headers: { Authorization: `Bearer ${t}` },
-      });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Playlist failed:", res.status, err);
-      setSpSelectedPlaylist((p) => ({
-        ...p,
-        error: `Error ${res.status}: ${err}`,
-      }));
-      setSpLoadingPlaylist(false);
-      return;
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/playlists/${pl.id}/tracks?limit=50`,
+        { headers: { Authorization: `Bearer ${t}` } }
+      );
+      const text = await res.text();
+      console.log("Playlist response:", res.status, text.slice(0, 300));
+      if (!res.ok) {
+        setSpSelectedPlaylist((p) => ({
+          ...p,
+          error: `${res.status}: ${text.slice(0, 200)}`,
+        }));
+        setSpLoadingPlaylist(false);
+        return;
+      }
+      const data = JSON.parse(text);
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const tracks = items.map((i) => i?.track).filter((t) => t && t.id);
+      setSpSelectedPlaylist((p) => ({ ...p, tracks }));
+    } catch (e) {
+      console.error("Playlist error:", e);
+      setSpSelectedPlaylist((p) => ({ ...p, error: e.message }));
     }
-    const data = await res.json();
-    // Handle both response shapes: /tracks returns {items:[]} and /playlists returns {tracks:{items:[]}}
-    const rawItems = data?.items || data?.tracks?.items || [];
-    const tracks = rawItems.map((i) => i?.track || i).filter((t) => t && t.id);
-    setSpSelectedPlaylist((p) => ({ ...p, tracks }));
     setSpLoadingPlaylist(false);
   };
   const spPlayFromPlaylist = async (playlistUri, trackUri) => {
