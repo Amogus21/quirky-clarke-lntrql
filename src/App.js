@@ -474,7 +474,7 @@ const getTodayKey = () => {
   )}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-function SignIn({ onSession, dark, c }) {
+function SignIn({ onSession, onSkip, dark, c }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -600,6 +600,22 @@ function SignIn({ onSession, dark, c }) {
               We'll email you a link. Click it and you're in — no password
               needed.
             </p>
+            <button
+              onClick={onSkip}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: `1px solid ${c.border}`,
+                color: c.textMid,
+                padding: "10px",
+                fontSize: 12,
+                cursor: "pointer",
+                fontFamily: "'Georgia',serif",
+                marginTop: 8,
+              }}
+            >
+              Continue without account
+            </button>
           </div>
         ) : (
           <div style={{ border: `2px solid ${c.borderStrong}`, padding: 24 }}>
@@ -656,6 +672,12 @@ export default function StudyPlan() {
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
   const [view, setView] = useState("today");
+  const [mobile, setMobile] = useState(() => ls.get("gcse_mobile", false));
+  const toggleMobile = () =>
+    setMobile((m) => {
+      ls.set("gcse_mobile", !m);
+      return !m;
+    });
   const [, setTick] = useState(0);
   const [checkedTips, setCheckedTips] = useState({});
   const [dark, setDark] = useState(() => ls.get("gcse_dark", false));
@@ -1366,14 +1388,18 @@ export default function StudyPlan() {
 
   if (authLoading) {
   } // skip loading screen
-  // if (!session) return <SignIn onSession={s => { ls.set("gcse_session",s); setSession(s); }} dark={dark} c={c} />;
-
-  const [mobile, setMobile] = useState(() => ls.get("gcse_mobile", false));
-  const toggleMobile = () =>
-    setMobile((m) => {
-      ls.set("gcse_mobile", !m);
-      return !m;
-    });
+  if (!session)
+    return (
+      <SignIn
+        onSession={(s) => {
+          ls.set("gcse_session", s);
+          setSession(s);
+        }}
+        onSkip={() => setSession({ access_token: null, user: { id: null } })}
+        dark={dark}
+        c={c}
+      />
+    );
 
   // Ensure viewport meta exists for mobile
   if (!document.getElementById("gcse-viewport")) {
@@ -1596,6 +1622,12 @@ export default function StudyPlan() {
               style={{ ...pill(false), padding: "8px 12px", fontSize: 15 }}
             >
               {D ? "☀" : "☾"}
+            </button>
+            <button
+              onClick={signOut}
+              style={{ ...pill(false), padding: "8px 12px", fontSize: 11 }}
+            >
+              Sign out
             </button>
             <button
               onClick={toggleMobile}
