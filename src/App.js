@@ -382,7 +382,7 @@ const TODO_ITEMS = [
 ];
 
 const SP_CLIENT_ID = "2741ff4671b04fa3bfa8e5550369e0f7";
-const SP_REDIRECT = "https://lntrql.csb.app";
+const SP_REDIRECT = "https://cerulean-parfait-7652ed.netlify.app";
 const SP_SCOPES =
   "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read";
 
@@ -1025,13 +1025,27 @@ export default function StudyPlan() {
         const access_token = params.get("access_token");
         const refresh_token = params.get("refresh_token");
         if (access_token && refresh_token) {
-          const newSession = {
-            access_token,
-            refresh_token,
-            user: { id: "temp-user" },
-          };
-          ls.set("gcse_session", newSession);
-          setSession(newSession);
+          // Fetch real user from Supabase
+          try {
+            const userRes = await fetch(`${SB_URL}/auth/v1/user`, {
+              headers: {
+                apikey: SB_KEY,
+                Authorization: `Bearer ${access_token}`,
+              },
+            });
+            const userData = await userRes.json();
+            const newSession = { access_token, refresh_token, user: userData };
+            ls.set("gcse_session", newSession);
+            setSession(newSession);
+          } catch {
+            const newSession = {
+              access_token,
+              refresh_token,
+              user: { id: access_token.slice(0, 20) },
+            };
+            ls.set("gcse_session", newSession);
+            setSession(newSession);
+          }
           window.history.replaceState({}, document.title, "/");
           setAuthLoading(false);
           return;
