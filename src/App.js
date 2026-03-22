@@ -1051,9 +1051,10 @@ export default function StudyPlan() {
     })();
   }, []);
 
+  const isGuest = !session?.access_token || session?.user?.id === "__guest__";
   const syncSet = (key, value) => {
     ls.set(key, value);
-    if (session?.access_token && session?.user?.id)
+    if (!isGuest)
       sbSet(session.access_token, session.user.id, key, value)
         .then(() => {
           setSyncStatus("synced");
@@ -1063,12 +1064,17 @@ export default function StudyPlan() {
   };
   const syncDel = (key) => {
     ls.del(key);
-    if (session?.access_token && session?.user?.id)
+    if (!isGuest)
       sbDel(session.access_token, session.user.id, key).catch(() => {});
   };
 
   useEffect(() => {
-    if (!session?.access_token || !session?.user?.id) return;
+    if (
+      !session?.access_token ||
+      !session?.user?.id ||
+      session.user.id === "__guest__"
+    )
+      return;
     (async () => {
       setSyncing(true);
       const remote = await sbGetAll(session.access_token, session.user.id);
@@ -1395,7 +1401,13 @@ export default function StudyPlan() {
           ls.set("gcse_session", s);
           setSession(s);
         }}
-        onSkip={() => setSession({ access_token: null, user: { id: null } })}
+        onSkip={() =>
+          setSession({
+            access_token: null,
+            refresh_token: null,
+            user: { id: "__guest__" },
+          })
+        }
         dark={dark}
         c={c}
       />
