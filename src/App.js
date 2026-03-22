@@ -732,8 +732,8 @@ export default function StudyPlan() {
   };
 
   useEffect(() => {
-    if (!spToken || document.getElementById("sp-sdk")) return;
-    window.onSpotifyWebPlaybackSDKReady = () => {
+    if (!spToken) return;
+    const initPlayer = () => {
       const player = new window.Spotify.Player({
         name: "Grade 9 Study Plan",
         getOAuthToken: async (cb) => {
@@ -756,10 +756,19 @@ export default function StudyPlan() {
       player.connect();
       setSpPlayer(player);
     };
-    const script = document.createElement("script");
-    script.id = "sp-sdk";
-    script.src = "https://sdk.scdn.co/spotify-player.js";
-    document.head.appendChild(script);
+    if (window.Spotify) {
+      // SDK already loaded
+      initPlayer();
+    } else if (!document.getElementById("sp-sdk")) {
+      window.onSpotifyWebPlaybackSDKReady = initPlayer;
+      const script = document.createElement("script");
+      script.id = "sp-sdk";
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      document.head.appendChild(script);
+    } else {
+      // Script tag exists but SDK not ready yet — set the callback
+      window.onSpotifyWebPlaybackSDKReady = initPlayer;
+    }
   }, [spToken]);
 
   useEffect(() => {
@@ -780,17 +789,16 @@ export default function StudyPlan() {
       setSpSearching(false);
       return;
     }
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
-        q
-      )}&type=track&limit=12`,
-      {
-        headers: { Authorization: `Bearer ${t}` },
-      }
-    );
+    const url = new URL("https://api.spotify.com/v1/search");
+    url.searchParams.set("q", q.trim());
+    url.searchParams.set("type", "track");
+    url.searchParams.set("limit", "10");
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${t}` },
+    });
     if (!res.ok) {
-      console.error("Search failed:", res.status, await res.text());
-      // Token might be bad despite refresh — disconnect and re-auth
+      const err = await res.text();
+      console.error("Search failed:", res.status, err);
       if (res.status === 401) {
         ls.del("sp_token");
         setSpToken(null);
