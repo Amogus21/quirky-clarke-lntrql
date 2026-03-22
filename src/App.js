@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-// ─── SUPABASE ─────────────────────────────────────────────────────────────────
 const SB_URL = "https://wtmeywptzxcnxzqharjq.supabase.co";
 const SB_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bWV5d3B0enhjbnh6cWhhcmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTI5NTYsImV4cCI6MjA4OTA2ODk1Nn0.wTzjQcri_I3srSQ807OdxC15-8qMEWGDamos0XFCnbQ";
@@ -11,8 +10,6 @@ const sbHeaders = (token) => ({
   Authorization: `Bearer ${token || SB_KEY}`,
   Prefer: "resolution=merge-duplicates,return=minimal",
 });
-
-// Upsert a row in user_data table: { user_id, key, value }
 const sbSet = async (token, uid, key, value) => {
   try {
     const res = await fetch(
@@ -32,23 +29,16 @@ const sbSet = async (token, uid, key, value) => {
         }),
       }
     );
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("sbSet failed:", res.status, err);
-    }
+    if (!res.ok) console.error("sbSet failed:", res.status, await res.text());
   } catch (e) {
     console.error("sbSet error:", e);
   }
 };
-
-// Get all rows for a user
 const sbGetAll = async (token, uid) => {
   try {
     const res = await fetch(
       `${SB_URL}/rest/v1/user_data?user_id=eq.${uid}&select=key,value`,
-      {
-        headers: sbHeaders(token),
-      }
+      { headers: sbHeaders(token) }
     );
     const rows = await res.json();
     if (!Array.isArray(rows)) return {};
@@ -65,23 +55,16 @@ const sbGetAll = async (token, uid) => {
     return {};
   }
 };
-
-// Delete a key
 const sbDel = async (token, uid, key) => {
   try {
     await fetch(
       `${SB_URL}/rest/v1/user_data?user_id=eq.${uid}&key=eq.${encodeURIComponent(
         key
       )}`,
-      {
-        method: "DELETE",
-        headers: sbHeaders(token),
-      }
+      { method: "DELETE", headers: sbHeaders(token) }
     );
   } catch {}
 };
-
-// Send magic link
 const sendMagicLink = async (email) => {
   const res = await fetch(`${SB_URL}/auth/v1/otp`, {
     method: "POST",
@@ -90,30 +73,6 @@ const sendMagicLink = async (email) => {
   });
   return res.ok;
 };
-
-// Exchange OTP token from URL hash
-const getSessionFromUrl = async () => {
-  const hash = window.location.hash;
-  if (!hash) return null;
-  const params = new URLSearchParams(hash.replace("#", "?"));
-  const access_token = params.get("access_token");
-  const refresh_token = params.get("refresh_token");
-  if (!access_token) return null;
-  // Verify by getting user
-  try {
-    const res = await fetch(`${SB_URL}/auth/v1/user`, {
-      headers: { apikey: SB_KEY, Authorization: `Bearer ${access_token}` },
-    });
-    if (!res.ok) return null;
-    const user = await res.json();
-    window.location.hash = "";
-    return { access_token, refresh_token, user };
-  } catch {
-    return null;
-  }
-};
-
-// Refresh session
 const refreshSession = async (refresh_token) => {
   try {
     const res = await fetch(
@@ -136,96 +95,26 @@ const refreshSession = async (refresh_token) => {
   }
 };
 
-// ─── APP DATA ─────────────────────────────────────────────────────────────────
 const EXAM_DATES = [
-  {
-    date: "2026-05-12",
-    label: "Biology Paper 1",
-    subject: "bio",
-    code: "8461/1H",
-    time: "PM",
-    duration: "1h 45m",
-  },
-  {
-    date: "2026-05-14",
-    label: "Maths Paper 1 - Non-Calculator",
-    subject: "maths",
-    code: "1MA1/1H",
-    time: "AM",
-    duration: "1h 30m",
-  },
-  {
-    date: "2026-05-18",
-    label: "Chemistry Paper 1",
-    subject: "chem",
-    code: "8462/1H",
-    time: "AM",
-    duration: "1h 45m",
-  },
+  { date: "2026-05-12", label: "Biology Paper 1", time: "PM" },
+  { date: "2026-05-14", label: "Maths Paper 1 - Non-Calculator", time: "AM" },
+  { date: "2026-05-18", label: "Chemistry Paper 1", time: "AM" },
   {
     date: "2026-05-21",
     label: "English Language Paper 1 - Creative Reading & Writing",
-    subject: "englang",
-    code: "8700/1",
     time: "AM",
-    duration: "1h 45m",
   },
-  {
-    date: "2026-06-02",
-    label: "Physics Paper 1",
-    subject: "phys",
-    code: "8463/1H",
-    time: "AM",
-    duration: "1h 45m",
-  },
-  {
-    date: "2026-06-03",
-    label: "Maths Paper 2 - Calculator",
-    subject: "maths",
-    code: "1MA1/2H",
-    time: "AM",
-    duration: "1h 30m",
-  },
+  { date: "2026-06-02", label: "Physics Paper 1", time: "AM" },
+  { date: "2026-06-03", label: "Maths Paper 2 - Calculator", time: "AM" },
   {
     date: "2026-06-05",
     label: "English Language Paper 2 - Viewpoints & Perspectives",
-    subject: "englang",
-    code: "8700/2",
     time: "AM",
-    duration: "1h 45m",
   },
-  {
-    date: "2026-06-05",
-    label: "Biology Paper 2",
-    subject: "bio",
-    code: "8461/2H",
-    time: "PM",
-    duration: "1h 45m",
-  },
-  {
-    date: "2026-06-10",
-    label: "Maths Paper 3 - Calculator",
-    subject: "maths",
-    code: "1MA1/3H",
-    time: "AM",
-    duration: "1h 30m",
-  },
-  {
-    date: "2026-06-12",
-    label: "Chemistry Paper 2",
-    subject: "chem",
-    code: "8462/2H",
-    time: "AM",
-    duration: "1h 45m",
-  },
-  {
-    date: "2026-06-15",
-    label: "Physics Paper 2",
-    subject: "phys",
-    code: "8463/2H",
-    time: "AM",
-    duration: "1h 45m",
-  },
+  { date: "2026-06-05", label: "Biology Paper 2", time: "PM" },
+  { date: "2026-06-10", label: "Maths Paper 3 - Calculator", time: "AM" },
+  { date: "2026-06-12", label: "Chemistry Paper 2", time: "AM" },
+  { date: "2026-06-15", label: "Physics Paper 2", time: "AM" },
 ];
 
 const SUBJECT_TOPICS = {
@@ -354,7 +243,7 @@ const RESOURCES = [
       "Maths Genie - videos + practice per topic",
       "Corbett Maths - harder questions",
       "Edexcel Higher past papers (2018-2025)",
-      "MathsWatch (if Maths Genie isn't clicking for a topic)",
+      "MathsWatch (if Maths Genie isn't clicking)",
     ],
   },
   {
@@ -401,152 +290,10 @@ const MOTIVATION_TIPS = [
   },
 ];
 
-const FULL_ROUTINE = [
-  {
-    time: "7:45 AM",
-    label: "Alarm - turn heater on immediately",
-    detail:
-      "Phone goes across the room before you sleep. The moment the alarm goes off, turn the heater on. Set three alarms: 7:45, 7:50, 7:55.",
-    type: "wake",
-  },
-  {
-    time: "7:45-8:00 AM",
-    label: "Drink a full glass of water",
-    detail:
-      "Keep a full glass on your desk the night before. Drink it before anything else. Dehydration is a major cause of morning grogginess.",
-    type: "wake",
-  },
-  {
-    time: "8:00-8:15 AM",
-    label: "Breakfast",
-    detail:
-      "2 eggs. Add toast or fruit if you can. Do not skip this - studying on an empty stomach tanks your focus.",
-    type: "morning",
-  },
-  {
-    time: "8:15-8:45 AM",
-    label: "Morning routine",
-    detail:
-      "Vitamins → Brush teeth → Shave → Shower (wipe glasses after). Same order every day.",
-    type: "morning",
-  },
-  {
-    time: "8:45-9:05 AM",
-    label: "Morning skincare - Skin+Me",
-    detail:
-      "1. Jelly cleanser (no wait needed) → 2. Brighten + Boost azelaic acid serum → wait 5 mins → 3. Rich moisturiser. No Daily Dose in the morning. 20 mins total.",
-    type: "morning",
-  },
-  {
-    time: "9:05-9:20 AM",
-    label: "Free time",
-    detail:
-      "Use this however you like before study begins. YouTube, music, chill.",
-    type: "morning",
-  },
-  {
-    time: "9:20 AM",
-    label: "Study begins",
-    detail:
-      "See the Study Schedule tab for your full 45-min block structure. 7 sessions total with breaks built in.",
-    type: "study",
-  },
-  {
-    time: "9:20-10:05 AM",
-    label: "Break 1 - Move your body",
-    detail: "Walk outside if possible. Stretch. Get water. No phone scrolling.",
-    type: "break",
-  },
-  {
-    time: "10:50-11:05 AM",
-    label: "Break 2 - Snack + fresh air",
-    detail:
-      "Small snack (fruit, nuts, crackers). Step outside for 5 mins. One or two songs - set a timer.",
-    type: "break",
-  },
-  {
-    time: "11:50-12:05 PM",
-    label: "Break 3 - Step outside + water",
-    detail:
-      "Get out of the room. Drink water. Rest your eyes away from screens.",
-    type: "break",
-  },
-  {
-    time: "12:50-1:50 PM",
-    label: "Lunch - proper break",
-    detail:
-      "Cook and eat a real meal. Go outside for at least 10 mins. YouTube is fine. Do NOT start gaming during lunch.",
-    type: "lunch",
-  },
-  {
-    time: "2:35-2:50 PM",
-    label: "Break 4 - Eyes off screen",
-    detail:
-      "Look out the window. Stretch your neck and shoulders. Drink water. Splash cold water on your face if drowsy.",
-    type: "break",
-  },
-  {
-    time: "3:35-3:50 PM",
-    label: "Break 5 - Walk or music",
-    detail:
-      "Listen to 1-2 favourite songs. Walk around the house. Do not sit back at your desk during this break.",
-    type: "break",
-  },
-  {
-    time: "4:35 PM",
-    label: "Study done",
-    detail:
-      "Everything from here is yours. Do not feel guilty about enjoying your evening - you earned it.",
-    type: "done",
-  },
-  {
-    time: "",
-    label: "Aim training + Valorant warmup (1hr)",
-    detail:
-      "Angle hold v2 (10 min) → Head tracking (5 min) → Flicking practice (5 min) → Deathmatch x2 (20 min) → Team DM x2.",
-    type: "evening",
-  },
-  {
-    time: "",
-    label: "Ranked queue (2hrs)",
-    detail:
-      "Hard cap at 3 games / 2 hours. Set a timer. Finish your current game, then stop.",
-    type: "evening",
-  },
-  {
-    time: "",
-    label: "Movie / episodes / chill (1hr)",
-    detail: "1-2 episodes or 1 movie. Guaranteed wind-down time.",
-    type: "evening",
-  },
-  {
-    time: "10:40-11:00 PM",
-    label: "Night skincare - Skin+Me",
-    detail:
-      "1. Jelly cleanser (no wait needed) → 2. Daily Dose → wait 10 mins → 3. Rich moisturiser. No azelaic acid at night. 20 mins total.",
-    type: "night",
-  },
-  {
-    time: "11:00 PM",
-    label: "In bed - turn off heater",
-    detail:
-      "Turn the heater off before getting in. Set a timer for it to come back on at 7:30am if needed. Lights out by 11pm.",
-    type: "night",
-  },
-  {
-    time: "Note",
-    label: "Why 9-11hrs sleep makes it worse",
-    detail:
-      "Too much sleep disrupts your sleep cycle and makes you more tired. 7.5-8 hours at consistent times is the sweet spot. Same time every day - even weekends.",
-    type: "warning",
-  },
-];
-
 const TODO_ITEMS = [
   {
     id: "t1",
     section: "MORNING",
-    time: "7:45 AM",
     label: "Alarm - turn heater on",
     detail:
       "Phone across the room before sleep. Turn heater on immediately. Three alarms: 7:45, 7:50, 7:55.",
@@ -554,49 +301,22 @@ const TODO_ITEMS = [
   {
     id: "t2",
     section: "MORNING",
-    time: "7:45-8:00 AM",
     label: "Drink a full glass of water",
     detail: "Glass on your desk the night before. Drink before anything else.",
   },
   {
     id: "t3",
     section: "MORNING",
-    time: "8:00-8:15 AM",
     label: "Breakfast (2 eggs)",
     detail: "Add toast or fruit if you can. Do not skip this.",
   },
-  {
-    id: "t4",
-    section: "MORNING",
-    time: "8:15-8:25 AM",
-    label: "Vitamins",
-    detail: "",
-  },
-  {
-    id: "t5",
-    section: "MORNING",
-    time: "8:25-8:35 AM",
-    label: "Brush teeth",
-    detail: "",
-  },
-  {
-    id: "t6",
-    section: "MORNING",
-    time: "8:35-8:40 AM",
-    label: "Shave",
-    detail: "",
-  },
-  {
-    id: "t7",
-    section: "MORNING",
-    time: "8:40-8:55 AM",
-    label: "Shower + wipe glasses",
-    detail: "",
-  },
+  { id: "t4", section: "MORNING", label: "Vitamins", detail: "" },
+  { id: "t5", section: "MORNING", label: "Brush teeth", detail: "" },
+  { id: "t6", section: "MORNING", label: "Shave", detail: "" },
+  { id: "t7", section: "MORNING", label: "Shower + wipe glasses", detail: "" },
   {
     id: "t8",
     section: "MORNING",
-    time: "8:55-9:15 AM",
     label: "Morning skincare",
     detail:
       "Cleanser → Azelaic acid (wait 5 min) → Moisturiser. No Daily Dose in the morning.",
@@ -604,106 +324,31 @@ const TODO_ITEMS = [
   {
     id: "t9",
     section: "MORNING",
-    time: "9:15-9:20 AM",
     label: "Free time",
     detail: "YouTube, music, chill - whatever you want before study starts.",
   },
-  {
-    id: "t10",
-    section: "STUDY",
-    time: "9:20-10:05 AM",
-    label: "Session - 1",
-    detail: "",
-  },
-  {
-    id: "t11",
-    section: "STUDY",
-    time: "10:05-10:20 AM",
-    label: "Break - 1",
-    detail: "",
-  },
-  {
-    id: "t12",
-    section: "STUDY",
-    time: "10:20-11:05 AM",
-    label: "Session - 2",
-    detail: "",
-  },
-  {
-    id: "t13",
-    section: "STUDY",
-    time: "11:05-11:20 AM",
-    label: "Break - 2",
-    detail: "",
-  },
-  {
-    id: "t14",
-    section: "STUDY",
-    time: "11:20-12:05 PM",
-    label: "Session - 3",
-    detail: "",
-  },
-  {
-    id: "t15",
-    section: "STUDY",
-    time: "12:05-12:20 PM",
-    label: "Break - 3",
-    detail: "",
-  },
-  {
-    id: "t16",
-    section: "STUDY",
-    time: "12:20-1:05 PM",
-    label: "Session - 4",
-    detail: "",
-  },
+  { id: "t10", section: "STUDY", label: "Session - 1", detail: "" },
+  { id: "t11", section: "STUDY", label: "Break - 1", detail: "" },
+  { id: "t12", section: "STUDY", label: "Session - 2", detail: "" },
+  { id: "t13", section: "STUDY", label: "Break - 2", detail: "" },
+  { id: "t14", section: "STUDY", label: "Session - 3", detail: "" },
+  { id: "t15", section: "STUDY", label: "Break - 3", detail: "" },
+  { id: "t16", section: "STUDY", label: "Session - 4", detail: "" },
   {
     id: "t17",
     section: "STUDY",
-    time: "1:05-2:05 PM",
     label: "Lunch",
     detail:
-      "Cook and eat a proper meal. Go outside. YouTube is fine. No gaming - timer is law.",
+      "Cook and eat a proper meal. Go outside. YouTube is fine. No gaming.",
   },
-  {
-    id: "t18",
-    section: "STUDY",
-    time: "2:05-2:50 PM",
-    label: "Session - 5",
-    detail: "",
-  },
-  {
-    id: "t19",
-    section: "STUDY",
-    time: "2:50-3:05 PM",
-    label: "Break - 4",
-    detail: "",
-  },
-  {
-    id: "t20",
-    section: "STUDY",
-    time: "3:05-3:50 PM",
-    label: "Session - 6",
-    detail: "",
-  },
-  {
-    id: "t21",
-    section: "STUDY",
-    time: "3:50-4:05 PM",
-    label: "Break - 5",
-    detail: "",
-  },
-  {
-    id: "t22",
-    section: "STUDY",
-    time: "4:05-4:50 PM",
-    label: "Session - 7",
-    detail: "",
-  },
+  { id: "t18", section: "STUDY", label: "Session - 5", detail: "" },
+  { id: "t19", section: "STUDY", label: "Break - 4", detail: "" },
+  { id: "t20", section: "STUDY", label: "Session - 6", detail: "" },
+  { id: "t21", section: "STUDY", label: "Break - 5", detail: "" },
+  { id: "t22", section: "STUDY", label: "Session - 7", detail: "" },
   {
     id: "t23",
     section: "EVENING",
-    time: "",
     label: "Aim training + Valorant warmup (1hr)",
     detail:
       "Angle hold v2 → Head tracking → Flicking → Deathmatch x2 → Team DM x2.",
@@ -711,7 +356,6 @@ const TODO_ITEMS = [
   {
     id: "t24",
     section: "EVENING",
-    time: "",
     label: "Ranked queue (2hrs)",
     detail:
       "Hard cap at 3 games / 2 hours. Set a timer. Finish your game then stop.",
@@ -719,14 +363,12 @@ const TODO_ITEMS = [
   {
     id: "t25",
     section: "EVENING",
-    time: "",
     label: "Movie / episodes / chill (1hr)",
     detail: "1-2 episodes or 1 movie. Guaranteed wind-down time.",
   },
   {
     id: "t26",
     section: "NIGHT",
-    time: "10:40-11:00 PM",
     label: "Night skincare",
     detail:
       "Cleanser → Daily Dose (wait 10 min) → Moisturiser. No azelaic acid at night.",
@@ -734,25 +376,11 @@ const TODO_ITEMS = [
   {
     id: "t27",
     section: "NIGHT",
-    time: "11:00 PM",
     label: "In bed - turn off heater",
     detail: "Turn the heater off before getting in. Lights out by 11pm.",
   },
 ];
 
-const tabs = [
-  { id: "todo", label: "Daily To-Do" },
-  { id: "today", label: "What to Study" },
-  { id: "tracker", label: "Topic Tracker" },
-  { id: "tutorlog", label: "Tutor Log" },
-  { id: "overview", label: "Overview" },
-  { id: "howto", label: "How to Use" },
-  { id: "daily", label: "Study Schedule" },
-  { id: "resources", label: "Resources" },
-  { id: "motivation", label: "Motivation" },
-];
-
-// ─── SPOTIFY ──────────────────────────────────────────────────────────────────
 const SP_CLIENT_ID = "2741ff4671b04fa3bfa8e5550369e0f7";
 const SP_REDIRECT = "https://cheerful-cheesecake-8dde4f.netlify.app";
 const SP_SCOPES =
@@ -774,20 +402,6 @@ const spChallenge = async (verifier) => {
     .replace(/\//g, "_")
     .replace(/=/g, "");
 };
-const spLogin = async () => {
-  const verifier = spGenerateVerifier();
-  const challenge = await spChallenge(verifier);
-  localStorage.setItem("sp_verifier", verifier);
-  const params = new URLSearchParams({
-    client_id: SP_CLIENT_ID,
-    response_type: "code",
-    redirect_uri: SP_REDIRECT,
-    scope: SP_SCOPES,
-    code_challenge_method: "S256",
-    code_challenge: challenge,
-  });
-  window.location.href = `https://accounts.spotify.com/authorize?${params}`;
-};
 const spGetToken = async (code) => {
   const verifier = localStorage.getItem("sp_verifier");
   const res = await fetch("https://accounts.spotify.com/api/token", {
@@ -803,7 +417,7 @@ const spGetToken = async (code) => {
   });
   return res.ok ? res.json() : null;
 };
-const spRefresh = async (refresh_token) => {
+const spRefreshToken = async (refresh_token) => {
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -832,18 +446,6 @@ const parseExamDate = (str) => {
   const [y, m, d] = str.split("-").map(Number);
   return new Date(y, m - 1, d, 12, 0, 0);
 };
-const typeLabel = {
-  wake: "WAKE UP",
-  morning: "MORNING",
-  study: "STUDY",
-  break: "BREAK",
-  lunch: "LUNCH",
-  done: "DONE",
-  evening: "EVENING",
-  night: "NIGHT",
-  warning: "NOTE",
-};
-
 const ls = {
   get: (key, fallback) => {
     try {
@@ -864,22 +466,19 @@ const ls = {
     } catch {}
   },
 };
-
 const getTodayKey = () => {
   const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-// ─── SIGN IN SCREEN ───────────────────────────────────────────────────────────
 function SignIn({ onSession, dark, c }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const submit = async () => {
     if (!email.trim()) return;
     setLoading(true);
@@ -887,10 +486,8 @@ function SignIn({ onSession, dark, c }) {
     const ok = await sendMagicLink(email.trim());
     setLoading(false);
     if (ok) setSent(true);
-    else
-      setError("Something went wrong. Check your email address and try again.");
+    else setError("Something went wrong. Try again.");
   };
-
   return (
     <div
       style={{
@@ -913,13 +510,12 @@ function SignIn({ onSession, dark, c }) {
             marginBottom: 16,
           }}
         >
-          GCSE 2026 - 60-Day Master Plan
+          GCSE 2026
         </div>
         <h1
           style={{
             fontSize: 28,
             fontWeight: 700,
-            letterSpacing: "-1px",
             color: c.text,
             margin: "0 0 8px",
           }}
@@ -936,7 +532,6 @@ function SignIn({ onSession, dark, c }) {
         >
           Sign in to sync your progress across all your devices.
         </p>
-
         {!sent ? (
           <div>
             <div
@@ -1028,7 +623,7 @@ function SignIn({ onSession, dark, c }) {
             >
               We sent a link to{" "}
               <strong style={{ color: c.text }}>{email}</strong>. Click it to
-              sign in. You can close this tab.
+              sign in.
             </p>
             <button
               onClick={() => {
@@ -1055,16 +650,11 @@ function SignIn({ onSession, dark, c }) {
   );
 }
 
-// ─── MAIN APP ────────────────────────────────────────────────────────────────
 export default function StudyPlan() {
-  // ── Auth state ──
   const [session, setSession] = useState(() => ls.get("gcse_session", null));
   const [authLoading, setAuthLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(""); // "", "synced", "offline"
-
-  // ── UI state ──
-  const [activeTab, setActiveTab] = useState("todo");
+  const [syncStatus, setSyncStatus] = useState("");
   const [view, setView] = useState("today");
   const [, setTick] = useState(0);
   const [checkedTips, setCheckedTips] = useState({});
@@ -1075,7 +665,6 @@ export default function StudyPlan() {
       return !d;
     });
 
-  // ── SPOTIFY state ──
   const [spToken, setSpToken] = useState(() => ls.get("sp_token", null));
   const [spPlayer, setSpPlayer] = useState(null);
   const [spDeviceId, setSpDeviceId] = useState(null);
@@ -1090,29 +679,11 @@ export default function StudyPlan() {
   const [spReady, setSpReady] = useState(false);
   const spProgressRef = useRef(null);
 
-  // ─── SPOTIFY HELPERS ─────────────────────────────────────────────
-  const spLogin = async () => {
-    const verifier = spGenerateVerifier();
-    const challenge = await spChallenge(verifier);
-    localStorage.setItem("sp_verifier", verifier);
-    const params = new URLSearchParams({
-      client_id: SP_CLIENT_ID,
-      response_type: "code",
-      redirect_uri: SP_REDIRECT,
-      scope: SP_SCOPES,
-      code_challenge_method: "S256",
-      code_challenge: challenge,
-    });
-    window.location.href = `https://accounts.spotify.com/authorize?${params}`;
-  };
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
 
-  const spTogglePlay = async () => {
-    if (!spPlayer) return;
-    const state = await spPlayer.getCurrentState();
-    if (!state) return;
-    spPlayer.togglePlay();
-  };
-  // Handle OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -1133,30 +704,35 @@ export default function StudyPlan() {
     })();
   }, []);
 
-  // Refresh token when expired
   const getSpAccess = async () => {
     if (!spToken) return null;
-    if (Date.now() < spToken.expires_at - 60000) return spToken.access_token;
-    const data = await spRefresh(spToken.refresh_token);
-    if (!data?.access_token) {
-      ls.del("sp_token");
-      setSpToken(null);
-      return null;
+    // If no expires_at or expired, refresh
+    if (!spToken.expires_at || Date.now() >= spToken.expires_at - 60000) {
+      if (!spToken.refresh_token) {
+        ls.del("sp_token");
+        setSpToken(null);
+        return null;
+      }
+      const data = await spRefreshToken(spToken.refresh_token);
+      if (!data?.access_token) {
+        ls.del("sp_token");
+        setSpToken(null);
+        return null;
+      }
+      const tok = {
+        ...spToken,
+        access_token: data.access_token,
+        expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+      };
+      ls.set("sp_token", tok);
+      setSpToken(tok);
+      return tok.access_token;
     }
-    const tok = {
-      ...spToken,
-      access_token: data.access_token,
-      expires_at: Date.now() + data.expires_in * 1000,
-    };
-    ls.set("sp_token", tok);
-    setSpToken(tok);
-    return tok.access_token;
+    return spToken.access_token;
   };
 
-  // Load Spotify Web Playback SDK
   useEffect(() => {
-    if (!spToken) return;
-    if (document.getElementById("sp-sdk")) return;
+    if (!spToken || document.getElementById("sp-sdk")) return;
     window.onSpotifyWebPlaybackSDKReady = () => {
       const player = new window.Spotify.Player({
         name: "Grade 9 Study Plan",
@@ -1186,15 +762,13 @@ export default function StudyPlan() {
     document.head.appendChild(script);
   }, [spToken]);
 
-  // Progress ticker
   useEffect(() => {
     clearInterval(spProgressRef.current);
-    if (spPlaying) {
+    if (spPlaying)
       spProgressRef.current = setInterval(
         () => setSpProgress((p) => p + 500),
         500
       );
-    }
     return () => clearInterval(spProgressRef.current);
   }, [spPlaying]);
 
@@ -1202,15 +776,32 @@ export default function StudyPlan() {
     if (!q.trim()) return;
     setSpSearching(true);
     const t = await getSpAccess();
-    if (!t) return;
-    const data = await spApi(
-      t,
-      `/search?q=${encodeURIComponent(q)}&type=track&limit=12`
+    if (!t) {
+      setSpSearching(false);
+      return;
+    }
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+        q
+      )}&type=track&limit=12`,
+      {
+        headers: { Authorization: `Bearer ${t}` },
+      }
     );
+    if (!res.ok) {
+      console.error("Search failed:", res.status, await res.text());
+      // Token might be bad despite refresh — disconnect and re-auth
+      if (res.status === 401) {
+        ls.del("sp_token");
+        setSpToken(null);
+      }
+      setSpSearching(false);
+      return;
+    }
+    const data = await res.json();
     setSpResults(data?.tracks?.items || []);
     setSpSearching(false);
   };
-
   const spPlayTrack = async (uri) => {
     const t = await getSpAccess();
     if (!t || !spDeviceId) return;
@@ -1218,7 +809,6 @@ export default function StudyPlan() {
       uris: [uri],
     });
   };
-
   const spToggle = () => spPlayer?.togglePlay();
   const spNext = () => spPlayer?.nextTrack();
   const spPrev = () => spPlayer?.previousTrack();
@@ -1232,16 +822,24 @@ export default function StudyPlan() {
     setSpPlayer(null);
     setSpReady(false);
   };
-
+  const spDoLogin = async () => {
+    const verifier = spGenerateVerifier();
+    const challenge = await spChallenge(verifier);
+    localStorage.setItem("sp_verifier", verifier);
+    const params = new URLSearchParams({
+      client_id: SP_CLIENT_ID,
+      response_type: "code",
+      redirect_uri: SP_REDIRECT,
+      scope: SP_SCOPES,
+      code_challenge_method: "S256",
+      code_challenge: challenge,
+    });
+    window.location.href = `https://accounts.spotify.com/authorize?${params}`;
+  };
   const fmtTime = (ms) => {
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   };
-
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60000);
-    return () => clearInterval(id);
-  }, []);
 
   const c = {
     bg: dark ? "#111" : "#fff",
@@ -1250,45 +848,29 @@ export default function StudyPlan() {
     textDim: dark ? "#666" : "#bbb",
     border: dark ? "#333" : "#ddd",
     borderStrong: dark ? "#e8e8e8" : "#000",
-    rowAlt: dark ? "#1a1a1a" : "#fafafa",
-    rowWarn: dark ? "#1e1a00" : "#f7f7f7",
     card: dark ? "#1a1a1a" : "#fff",
     input: dark ? "#1a1a1a" : "#fff",
-    inputBorder: dark ? "#444" : "#ddd",
   };
 
-  // ── Handle magic link on page load ──
   useEffect(() => {
     (async () => {
-      // Handle magic link manually (FIXED)
       if (window.location.hash.includes("access_token")) {
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-
+        const params = new URLSearchParams(window.location.hash.substring(1));
         const access_token = params.get("access_token");
         const refresh_token = params.get("refresh_token");
-
         if (access_token && refresh_token) {
           const newSession = {
             access_token,
             refresh_token,
-            user: {
-              id: "temp-user", // prevents crash
-            },
+            user: { id: "temp-user" },
           };
-
           ls.set("gcse_session", newSession);
           setSession(newSession);
-
-          // clean URL
           window.history.replaceState({}, document.title, "/");
-
           setAuthLoading(false);
           return;
         }
       }
-
-      // Try refreshing existing session
       if (session?.refresh_token) {
         const refreshed = await refreshSession(session.refresh_token);
         if (refreshed) {
@@ -1299,54 +881,40 @@ export default function StudyPlan() {
           setSession(null);
         }
       }
-
       setAuthLoading(false);
     })();
   }, []);
 
-  // ── Sync helper: write to both localStorage and Supabase ──
   const syncSet = (key, value) => {
     ls.set(key, value);
-    if (session?.access_token && session?.user?.id) {
+    if (session?.access_token && session?.user?.id)
       sbSet(session.access_token, session.user.id, key, value)
         .then(() => {
           setSyncStatus("synced");
           setTimeout(() => setSyncStatus(""), 2000);
         })
         .catch(() => setSyncStatus("offline"));
-    }
   };
-
   const syncDel = (key) => {
     ls.del(key);
-    if (session?.access_token && session?.user?.id) {
+    if (session?.access_token && session?.user?.id)
       sbDel(session.access_token, session.user.id, key).catch(() => {});
-    }
   };
 
-  // ── On sign-in: pull all data from Supabase and merge into localStorage ──
   useEffect(() => {
     if (!session?.access_token || !session?.user?.id) return;
     (async () => {
       setSyncing(true);
       const remote = await sbGetAll(session.access_token, session.user.id);
-      // Keys that should be synced (not device-local)
-      const syncableKeys = [
-        "gcse_todo",
-        "gcse_topics",
-        "gcse_streak",
-        "gcse_tutor_logs",
-      ];
-      // If Supabase doesn't have a key that localStorage does, clear it — Supabase is source of truth
-      syncableKeys.forEach((key) => {
-        if (!(key in remote)) ls.del(key);
-      });
-      // Apply remote values
+      ["gcse_todo", "gcse_topics", "gcse_streak", "gcse_tutor_logs"].forEach(
+        (key) => {
+          if (!(key in remote)) ls.del(key);
+        }
+      );
       Object.entries(remote).forEach(([key, value]) => {
         if (key === "gcse_timer_state" || key === "gcse_sw_state") return;
         ls.set(key, value);
       });
-      // Reload state from localStorage after merge
       setChecked(() => {
         const saved = ls.get("gcse_todo", null);
         if (!saved || saved.date !== getTodayKey()) return {};
@@ -1363,32 +931,23 @@ export default function StudyPlan() {
         })
       );
       setSessionSubjects(ls.get("gcse_session_subjects_" + getTodayKey(), {}));
-      const sd = ls.get("gcse_streak", { count: 0, lastDate: null });
-      // streak is derived, will re-render naturally
       setSyncing(false);
       setSyncStatus("synced");
       setTimeout(() => setSyncStatus(""), 3000);
     })();
   }, [session?.user?.id]);
 
-  // ── Sign out ──
   const signOut = () => {
     ls.del("gcse_session");
     setSession(null);
   };
 
-  // ── Dates ──
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const examDate = parseExamDate("2026-05-12");
   const daysUntilExam = Math.ceil((examDate - today) / 86400000);
-  const now2 = new Date();
-  const totalMinsUntilExam = Math.floor((examDate - now2) / 60000);
-  const hoursUntilExam = Math.floor((totalMinsUntilExam % (60 * 24)) / 60);
-  const minsUntilExam = totalMinsUntilExam % 60;
   const toggleTip = (i) => setCheckedTips((p) => ({ ...p, [i]: !p[i] }));
 
-  // ── TO-DO ──
   const [checked, setChecked] = useState(() => {
     const saved = ls.get("gcse_todo", null);
     if (!saved || saved.date !== getTodayKey()) return {};
@@ -1406,21 +965,17 @@ export default function StudyPlan() {
     syncDel("gcse_todo");
   };
   const totalDone = Object.values(checked).filter(Boolean).length;
-  const todoSections = [...new Set(TODO_ITEMS.map((t) => t.section))];
 
-  // ── STREAK ──
   const updateStreak = (wasComplete) => {
     const streakData = ls.get("gcse_streak", { count: 0, lastDate: null });
     const todayKey = getTodayKey();
     if (streakData.lastDate === todayKey) return streakData.count;
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const y = yesterday;
-    const yKey = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(y.getDate()).padStart(2, "0")}`;
-    let newCount = wasComplete
+    const yKey = `${yesterday.getFullYear()}-${String(
+      yesterday.getMonth() + 1
+    ).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+    const newCount = wasComplete
       ? streakData.lastDate === yKey
         ? streakData.count + 1
         : 1
@@ -1434,7 +989,6 @@ export default function StudyPlan() {
     if (totalDone === TODO_ITEMS.length) updateStreak(true);
   }, [totalDone]);
 
-  // ── TOPIC TRACKER ──
   const [topicsDone, setTopicsDone] = useState(() => ls.get("gcse_topics", {}));
   const [openSubject, setOpenSubject] = useState(null);
   const toggleTopic = (subject, topic) => {
@@ -1446,12 +1000,10 @@ export default function StudyPlan() {
     });
   };
 
-  // ── SESSION SUBJECTS ──
   const [sessionSubjects, setSessionSubjects] = useState(() =>
     ls.get("gcse_session_subjects_" + getTodayKey(), {})
   );
 
-  // ── TIMER (localStorage only — device specific) ──
   const TIMER_KEY = "gcse_timer_state";
   const loadTimerState = () => {
     const saved = ls.get(TIMER_KEY, null);
@@ -1487,7 +1039,6 @@ export default function StudyPlan() {
     timerSecondsRef.current = seconds;
   };
 
-  // ── SESSION COUNTER ──
   const sessionCountKey = `gcse_sessions_${getTodayKey()}`;
   const [sessionCounts, setSessionCounts] = useState(() =>
     ls.get(sessionCountKey, { study: 0, break: 0, lunch: 0 })
@@ -1560,7 +1111,6 @@ export default function StudyPlan() {
       : 0;
   const timerDone = timerSeconds === 0;
 
-  // ── NOTES ──
   const notesKey = `gcse_notes_${getTodayKey()}`;
   const [notes, setNotes] = useState(() => ls.get(notesKey, ""));
   const saveNotes = (val) => {
@@ -1568,15 +1118,16 @@ export default function StudyPlan() {
     syncSet(notesKey, val);
   };
 
-  // ── STOPWATCH ──
   const SW_KEY = "gcse_sw_state";
   const loadSw = () => {
     const saved = ls.get(SW_KEY, null);
-    if (!saved) return { ms: 0, laps: [], running: false, startedAt: null };
-    if (saved.running && saved.startedAt) {
-      const elapsed = Date.now() - saved.startedAt;
-      return { ...saved, ms: saved.ms + elapsed, running: true };
-    }
+    if (!saved) return { ms: 0, laps: [], running: false };
+    if (saved.running && saved.startedAt)
+      return {
+        ...saved,
+        ms: saved.ms + (Date.now() - saved.startedAt),
+        running: true,
+      };
     return saved;
   };
   const initSw = loadSw();
@@ -1586,7 +1137,6 @@ export default function StudyPlan() {
   const swRef = useRef(null);
   const swStartRef = useRef(initSw.running ? Date.now() : null);
   const swBaseRef = useRef(initSw.ms);
-
   const saveSw = (ms, laps, running) => {
     ls.set(SW_KEY, {
       ms,
@@ -1595,7 +1145,6 @@ export default function StudyPlan() {
       startedAt: running ? Date.now() : null,
     });
   };
-
   useEffect(() => {
     if (swRunning) {
       swStartRef.current = Date.now();
@@ -1616,7 +1165,6 @@ export default function StudyPlan() {
     }
     return () => clearInterval(swRef.current);
   }, [swRunning]);
-
   const swReset = () => {
     clearInterval(swRef.current);
     setSwRunning(false);
@@ -1626,26 +1174,22 @@ export default function StudyPlan() {
     swStartRef.current = null;
     ls.del(SW_KEY);
   };
-
   const swLap = () => {
     if (!swRunning && swMs === 0) return;
     const newLaps = [{ id: swLaps.length + 1, ms: swMs }, ...swLaps];
     setSwLaps(newLaps);
     saveSw(swBaseRef.current, newLaps, swRunning);
   };
-
   const fmtMs = (ms) => {
     const totalSecs = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    const centis = Math.floor((ms % 1000) / 10);
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(
+    return `${String(Math.floor(totalSecs / 60)).padStart(2, "0")}:${String(
+      totalSecs % 60
+    ).padStart(2, "0")}.${String(Math.floor((ms % 1000) / 10)).padStart(
       2,
       "0"
-    )}.${String(centis).padStart(2, "0")}`;
+    )}`;
   };
 
-  // ── TUTOR LOG ──
   const [tutorLogs, setTutorLogs] = useState(() =>
     ls.get("gcse_tutor_logs", [])
   );
@@ -1676,8 +1220,7 @@ export default function StudyPlan() {
     syncSet("gcse_tutor_logs", next);
   };
 
-  // ── AUTH LOADING / SIGN IN ──
-  if (authLoading) {
+  if (authLoading)
     return (
       <div
         style={{
@@ -1687,16 +1230,14 @@ export default function StudyPlan() {
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "'Georgia',serif",
-          color: c.textDim,
+          color: "#999",
           fontSize: 13,
         }}
       >
         Loading...
       </div>
     );
-  }
-
-  if (!session) {
+  if (!session)
     return (
       <SignIn
         onSession={(s) => {
@@ -1707,20 +1248,7 @@ export default function StudyPlan() {
         c={c}
       />
     );
-  }
 
-  // ── MAIN RENDER ──────────────────────────────────────────────────────────────
-
-  const dayNames = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  const dayName = dayNames[new Date().getDay()];
   const subjects = [
     "Biology",
     "Chemistry",
@@ -1734,7 +1262,7 @@ export default function StudyPlan() {
     0
   );
   const doneTopics = Object.keys(topicsDone).filter(
-    (k) => !!topicsDone[k]
+    (k) => topicsDone[k] === true
   ).length;
   const topicsPct = Math.round((doneTopics / totalTopics) * 100);
   const nowForDay = new Date();
@@ -1742,16 +1270,7 @@ export default function StudyPlan() {
     (23 - nowForDay.getHours()) * 60 + (59 - nowForDay.getMinutes());
   const hoursLeftToday = Math.floor(minsLeftToday / 60);
   const minsLeftTodayRem = minsLeftToday % 60;
-  const views = [
-    "today",
-    "tracker",
-    "tutor",
-    "resources",
-    "motivation",
-    "spotify",
-  ];
 
-  // Inject fonts
   if (!document.getElementById("gcse-fonts")) {
     const link = document.createElement("link");
     link.id = "gcse-fonts";
@@ -1762,27 +1281,21 @@ export default function StudyPlan() {
   }
 
   const D = dark;
-  // Monochrome palette — layered greys, no colour
-  const bg = D ? "#0a0a0a" : "#f2f1ee";
-  const surface = D ? "#141414" : "#fafaf8";
-  const surface2 = D ? "#1c1c1c" : "#f0efec";
-  const surface3 = D ? "#242424" : "#e8e7e3";
-  const border1 = D ? "#2a2a2a" : "#dddbd5";
-  const border2 = D ? "#383838" : "#c8c6bf";
-  const txt1 = D ? "#ececec" : "#1a1a1a";
-  const txt2 = D ? "#999" : "#5a5a5a";
-  const txt3 = D ? "#555" : "#9a9896";
-  const accent = D ? "#ececec" : "#1a1a1a"; // strong accent = just strong text
-  const accentBg = D ? "#ececec" : "#1a1a1a";
-  const accentTx = D ? "#0a0a0a" : "#fafaf8";
+  const bg = D ? "#0a0a0a" : "#f2f1ee",
+    surface = D ? "#141414" : "#fafaf8",
+    surface2 = D ? "#1c1c1c" : "#f0efec",
+    surface3 = D ? "#242424" : "#e8e7e3";
+  const border1 = D ? "#2a2a2a" : "#dddbd5",
+    border2 = D ? "#383838" : "#c8c6bf";
+  const txt1 = D ? "#ececec" : "#1a1a1a",
+    txt2 = D ? "#999" : "#5a5a5a",
+    txt3 = D ? "#555" : "#9a9896";
+  const accentBg = D ? "#ececec" : "#1a1a1a",
+    accentTx = D ? "#0a0a0a" : "#fafaf8";
   const shadow = D ? "0 1px 3px rgba(0,0,0,0.6)" : "0 1px 4px rgba(0,0,0,0.08)";
-  const shadowLg = D
-    ? "0 4px 16px rgba(0,0,0,0.5)"
-    : "0 4px 16px rgba(0,0,0,0.10)";
-
-  const mono = "'IBM Plex Mono', monospace";
-  const sans = "'DM Sans', sans-serif";
-  const serif = "'DM Serif Display', serif";
+  const mono = "'IBM Plex Mono', monospace",
+    sans = "'DM Sans', sans-serif",
+    serif = "'DM Serif Display', serif";
 
   const card = (extra = {}) => ({
     background: surface,
@@ -1791,7 +1304,6 @@ export default function StudyPlan() {
     boxShadow: shadow,
     ...extra,
   });
-
   const pill = (active) => ({
     background: active ? accentBg : "transparent",
     color: active ? accentTx : txt2,
@@ -1803,26 +1315,8 @@ export default function StudyPlan() {
     cursor: "pointer",
     borderRadius: 4,
     letterSpacing: "0.2px",
-    transition: "all 0.12s",
   });
-
-  const statNum = {
-    fontFamily: mono,
-    fontSize: 22,
-    fontWeight: 600,
-    lineHeight: 1,
-    color: txt1,
-  };
-  const statLabel = {
-    fontFamily: sans,
-    fontSize: 10,
-    color: txt3,
-    textTransform: "uppercase",
-    letterSpacing: "1.2px",
-    marginTop: 4,
-  };
-
-  const sectionHead = {
+  const sh = {
     fontFamily: sans,
     fontSize: 10,
     fontWeight: 600,
@@ -1831,12 +1325,6 @@ export default function StudyPlan() {
     color: txt3,
     marginBottom: 14,
   };
-
-  const row = (extra = {}) => ({
-    display: "flex",
-    alignItems: "center",
-    ...extra,
-  });
 
   return (
     <div
@@ -1847,7 +1335,7 @@ export default function StudyPlan() {
         color: txt1,
       }}
     >
-      {/* ── NAVBAR ── */}
+      {/* NAVBAR */}
       <div
         style={{
           background: surface,
@@ -1865,21 +1353,14 @@ export default function StudyPlan() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span
-              style={{
-                fontFamily: serif,
-                fontSize: 17,
-                color: txt1,
-                letterSpacing: "-0.3px",
-              }}
-            >
+            <span style={{ fontFamily: serif, fontSize: 17, color: txt1 }}>
               Grade 9
             </span>
             <span style={{ fontFamily: mono, fontSize: 10, color: txt3 }}>
               GCSE 2026
             </span>
           </div>
-          <div style={{ display: "flex", gap: 3 }}>
+          <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
             {[
               ["today", "Today"],
               ["tracker", "Topics"],
@@ -1921,7 +1402,7 @@ export default function StudyPlan() {
         </div>
       </div>
 
-      {/* ── STAT STRIP ── */}
+      {/* STAT STRIP */}
       <div
         style={{
           background: surface2,
@@ -1948,8 +1429,29 @@ export default function StudyPlan() {
               textAlign: "center",
             }}
           >
-            <div style={statNum}>{s.v}</div>
-            <div style={statLabel}>{s.l}</div>
+            <div
+              style={{
+                fontFamily: mono,
+                fontSize: 22,
+                fontWeight: 600,
+                lineHeight: 1,
+                color: txt1,
+              }}
+            >
+              {s.v}
+            </div>
+            <div
+              style={{
+                fontFamily: sans,
+                fontSize: 10,
+                color: txt3,
+                textTransform: "uppercase",
+                letterSpacing: "1.2px",
+                marginTop: 4,
+              }}
+            >
+              {s.l}
+            </div>
           </div>
         ))}
       </div>
@@ -1957,7 +1459,7 @@ export default function StudyPlan() {
       <div
         style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 20px 40px" }}
       >
-        {/* ══════════════ TODAY ══════════════ */}
+        {/* TODAY */}
         {view === "today" && (
           <div
             style={{
@@ -1967,9 +1469,7 @@ export default function StudyPlan() {
               alignItems: "start",
             }}
           >
-            {/* LEFT */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Daily To-Do */}
               <div style={{ ...card(), padding: 24 }}>
                 <div
                   style={{
@@ -1986,7 +1486,6 @@ export default function StudyPlan() {
                         fontSize: 22,
                         color: txt1,
                         letterSpacing: "-0.5px",
-                        lineHeight: 1.1,
                       }}
                     >
                       Today's Plan
@@ -2027,8 +1526,6 @@ export default function StudyPlan() {
                     </button>
                   </div>
                 </div>
-
-                {/* Progress bar */}
                 <div
                   style={{
                     height: 2,
@@ -2047,7 +1544,6 @@ export default function StudyPlan() {
                     }}
                   />
                 </div>
-
                 {["MORNING", "STUDY", "EVENING", "NIGHT"].map((section) => {
                   const items = TODO_ITEMS.filter((t) => t.section === section);
                   const secDone = items.filter((t) => checked[t.id]).length;
@@ -2057,7 +1553,6 @@ export default function StudyPlan() {
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
-                          alignItems: "center",
                           marginBottom: 8,
                         }}
                       >
@@ -2083,7 +1578,7 @@ export default function StudyPlan() {
                           {secDone}/{items.length}
                         </span>
                       </div>
-                      {items.map((item, idx) => {
+                      {items.map((item) => {
                         const done = !!checked[item.id];
                         const isSession = item.label.startsWith("Session");
                         const isBreak = item.label.startsWith("Break");
@@ -2105,7 +1600,6 @@ export default function StudyPlan() {
                                 ? surface2
                                 : "transparent",
                               cursor: "pointer",
-                              transition: "background 0.1s",
                               opacity: done ? 0.55 : 1,
                             }}
                           >
@@ -2117,7 +1611,7 @@ export default function StudyPlan() {
                                 marginTop: 1,
                                 borderRadius: 3,
                                 border: `1.5px solid ${
-                                  done ? accent : border2
+                                  done ? accentBg : border2
                                 }`,
                                 background: done ? accentBg : "transparent",
                                 display: "flex",
@@ -2171,7 +1665,6 @@ export default function StudyPlan() {
                     </div>
                   );
                 })}
-
                 {totalDone === TODO_ITEMS.length && (
                   <div
                     style={{
@@ -2193,7 +1686,6 @@ export default function StudyPlan() {
                     </span>
                   </div>
                 )}
-
                 <div
                   style={{
                     marginTop: 20,
@@ -2201,7 +1693,7 @@ export default function StudyPlan() {
                     borderTop: `1px solid ${border1}`,
                   }}
                 >
-                  <div style={sectionHead}>Today's Notes</div>
+                  <div style={sh}>Today's Notes</div>
                   <textarea
                     value={notes}
                     onChange={(e) => saveNotes(e.target.value)}
@@ -2225,9 +1717,8 @@ export default function StudyPlan() {
                 </div>
               </div>
 
-              {/* Session subjects */}
               <div style={{ ...card(), padding: 24 }}>
-                <div style={sectionHead}>Sessions Today — Pick a Subject</div>
+                <div style={sh}>Sessions Today — Pick a Subject</div>
                 <div
                   style={{
                     display: "grid",
@@ -2253,7 +1744,6 @@ export default function StudyPlan() {
                           fontSize: 10,
                           color: txt3,
                           marginBottom: 10,
-                          letterSpacing: "1px",
                         }}
                       >
                         S{n} —{" "}
@@ -2292,11 +1782,9 @@ export default function StudyPlan() {
               </div>
             </div>
 
-            {/* RIGHT */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Exam countdowns */}
               <div style={{ ...card(), padding: 20 }}>
-                <div style={sectionHead}>Next Exams</div>
+                <div style={sh}>Next Exams</div>
                 {EXAM_DATES.filter((e) => parseExamDate(e.date) >= today)
                   .slice(0, 5)
                   .map((e, i, arr) => {
@@ -2411,9 +1899,8 @@ export default function StudyPlan() {
                 )}
               </div>
 
-              {/* Focus Timer */}
               <div style={{ ...card(), padding: 20 }}>
-                <div style={sectionHead}>Focus Timer</div>
+                <div style={sh}>Focus Timer</div>
                 <div
                   style={{
                     height: 2,
@@ -2519,7 +2006,6 @@ export default function StudyPlan() {
                 <div
                   style={{
                     display: "flex",
-                    gap: 0,
                     borderTop: `1px solid ${border1}`,
                     paddingTop: 14,
                   }}
@@ -2565,9 +2051,8 @@ export default function StudyPlan() {
                 </div>
               </div>
 
-              {/* Stopwatch */}
               <div style={{ ...card(), padding: 20 }}>
-                <div style={sectionHead}>Stopwatch</div>
+                <div style={sh}>Stopwatch</div>
                 <div
                   style={{
                     fontFamily: mono,
@@ -2651,7 +2136,7 @@ export default function StudyPlan() {
           </div>
         )}
 
-        {/* ══════════════ TOPIC TRACKER ══════════════ */}
+        {/* TOPIC TRACKER */}
         {view === "tracker" && (
           <div>
             <div
@@ -2871,7 +2356,7 @@ export default function StudyPlan() {
           </div>
         )}
 
-        {/* ══════════════ TUTOR LOG ══════════════ */}
+        {/* TUTOR LOG */}
         {view === "tutor" && (
           <div style={{ maxWidth: 720 }}>
             <div
@@ -2923,7 +2408,7 @@ export default function StudyPlan() {
                       onClick={() =>
                         setTutorForm((f) => ({ ...f, subject: s }))
                       }
-                      style={{ ...pill(tutorForm.subject === s) }}
+                      style={pill(tutorForm.subject === s)}
                     >
                       {s}
                     </button>
@@ -3104,7 +2589,7 @@ export default function StudyPlan() {
           </div>
         )}
 
-        {/* ══════════════ RESOURCES ══════════════ */}
+        {/* RESOURCES */}
         {view === "resources" && (
           <div
             style={{
@@ -3115,15 +2600,8 @@ export default function StudyPlan() {
           >
             {RESOURCES.map((r, i) => (
               <div key={i} style={{ ...card(), padding: 20 }}>
-                <div style={sectionHead}>{r.subject}</div>
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: 16,
-                    color: txt2,
-                    listStyle: "none",
-                  }}
-                >
+                <div style={sh}>{r.subject}</div>
+                <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
                   {r.items.map((item, j) => (
                     <li
                       key={j}
@@ -3132,7 +2610,6 @@ export default function StudyPlan() {
                         fontSize: 12,
                         lineHeight: "2.1",
                         color: txt2,
-                        paddingLeft: 0,
                       }}
                     >
                       — {item}
@@ -3144,7 +2621,7 @@ export default function StudyPlan() {
           </div>
         )}
 
-        {/* ══════════════ MOTIVATION ══════════════ */}
+        {/* MOTIVATION */}
         {view === "motivation" && (
           <div style={{ maxWidth: 720 }}>
             {MOTIVATION_TIPS.map((tip, i) => (
@@ -3217,7 +2694,7 @@ export default function StudyPlan() {
               </div>
             ))}
             <div style={{ ...card(), padding: 20, marginTop: 8 }}>
-              <div style={sectionHead}>On the Burnout Cycle</div>
+              <div style={sh}>On the Burnout Cycle</div>
               <p
                 style={{
                   fontFamily: sans,
@@ -3230,7 +2707,7 @@ export default function StudyPlan() {
                 You mentioned studying 1-2 hours, getting stressed, then losing
                 focus. That cycle happens because you're trying to study for too
                 long without structure. With 45-minute blocks and breaks built
-                in, there's nothing to escape from - the break is already
+                in, there's nothing to escape from — the break is already
                 coming.
                 <br />
                 <br />
@@ -3242,7 +2719,7 @@ export default function StudyPlan() {
           </div>
         )}
 
-        {/* ══════════════ SPOTIFY ══════════════ */}
+        {/* SPOTIFY */}
         {view === "spotify" && (
           <div style={{ maxWidth: 680, margin: "0 auto" }}>
             {!spToken ? (
@@ -3270,7 +2747,7 @@ export default function StudyPlan() {
                   your study app.
                 </div>
                 <button
-                  onClick={spLogin}
+                  onClick={spDoLogin}
                   style={{
                     ...pill(true),
                     padding: "12px 32px",
@@ -3285,7 +2762,6 @@ export default function StudyPlan() {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
               >
-                {/* Now Playing */}
                 <div style={{ ...card(), padding: 22 }}>
                   <div
                     style={{
@@ -3318,7 +2794,6 @@ export default function StudyPlan() {
                       Disconnect
                     </button>
                   </div>
-
                   {spTrack ? (
                     <div>
                       <div
@@ -3380,8 +2855,6 @@ export default function StudyPlan() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Progress */}
                       <div
                         onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
@@ -3396,6 +2869,7 @@ export default function StudyPlan() {
                           background: border1,
                           borderRadius: 2,
                           cursor: "pointer",
+                          marginBottom: 4,
                         }}
                       >
                         <div
@@ -3415,7 +2889,7 @@ export default function StudyPlan() {
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
-                          marginTop: 4,
+                          marginBottom: 14,
                         }}
                       >
                         <span
@@ -3437,15 +2911,12 @@ export default function StudyPlan() {
                           {fmtTime(spDuration)}
                         </span>
                       </div>
-
-                      {/* Controls */}
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           gap: 12,
-                          marginTop: 12,
                           marginBottom: 16,
                         }}
                       >
@@ -3480,8 +2951,6 @@ export default function StudyPlan() {
                           ⏭
                         </button>
                       </div>
-
-                      {/* Volume */}
                       <div
                         style={{
                           display: "flex",
@@ -3535,8 +3004,6 @@ export default function StudyPlan() {
                     </div>
                   )}
                 </div>
-
-                {/* Search */}
                 <div style={{ ...card(), padding: 20 }}>
                   <div
                     style={{
@@ -3678,7 +3145,6 @@ export default function StudyPlan() {
           fontSize: 10,
           color: txt3,
           background: surface,
-          letterSpacing: "0.5px",
         }}
       >
         GCSE 2026 · AQA & Edexcel · Always confirm exam dates with your centre
