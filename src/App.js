@@ -382,7 +382,7 @@ const TODO_ITEMS = [
 ];
 
 const SP_CLIENT_ID = "2741ff4671b04fa3bfa8e5550369e0f7";
-const SP_REDIRECT = "https://cheerful-cheesecake-8dde4f.netlify.app";
+const SP_REDIRECT = "https://cerulean-parfait-7652ed.netlify.app";
 const SP_SCOPES =
   "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read";
 
@@ -691,6 +691,17 @@ export default function StudyPlan() {
   }, []);
 
   useEffect(() => {
+    const handler = (e) => {
+      if (e.message === "Script error." || e.filename?.includes("spotify")) {
+        e.preventDefault();
+        return true;
+      }
+    };
+    window.addEventListener("error", handler);
+    return () => window.removeEventListener("error", handler);
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     if (!code) return;
@@ -739,41 +750,52 @@ export default function StudyPlan() {
 
   useEffect(() => {
     if (!spToken) return;
-    const initPlayer = () => {
-      const player = new window.Spotify.Player({
-        name: "Grade 9 Study Plan",
-        getOAuthToken: async (cb) => {
-          const t = await getSpAccess();
-          if (t) cb(t);
-        },
-        volume: 0.5,
-      });
-      player.addListener("ready", ({ device_id }) => {
-        setSpDeviceId(device_id);
-        setSpReady(true);
-      });
-      player.addListener("player_state_changed", (state) => {
-        if (!state) return;
-        setSpTrack(state.track_window.current_track);
-        setSpPlaying(!state.paused);
-        setSpProgress(state.position);
-        setSpDuration(state.duration);
-      });
-      player.connect();
-      setSpPlayer(player);
-    };
-    if (window.Spotify) {
-      // SDK already loaded
-      initPlayer();
-    } else if (!document.getElementById("sp-sdk")) {
-      window.onSpotifyWebPlaybackSDKReady = initPlayer;
-      const script = document.createElement("script");
-      script.id = "sp-sdk";
-      script.src = "https://sdk.scdn.co/spotify-player.js";
-      document.head.appendChild(script);
-    } else {
-      // Script tag exists but SDK not ready yet — set the callback
-      window.onSpotifyWebPlaybackSDKReady = initPlayer;
+    try {
+      const initPlayer = () => {
+        try {
+          const player = new window.Spotify.Player({
+            name: "Grade 9 Study Plan",
+            getOAuthToken: async (cb) => {
+              const t = await getSpAccess();
+              if (t) cb(t);
+            },
+            volume: 0.5,
+          });
+          player.addListener("ready", ({ device_id }) => {
+            setSpDeviceId(device_id);
+            setSpReady(true);
+          });
+          player.addListener("player_state_changed", (state) => {
+            if (!state) return;
+            setSpTrack(state.track_window.current_track);
+            setSpPlaying(!state.paused);
+            setSpProgress(state.position);
+            setSpDuration(state.duration);
+          });
+          player.connect();
+          setSpPlayer(player);
+        } catch (e) {
+          console.warn(
+            "Spotify player init failed (expected in CodeSandbox):",
+            e.message
+          );
+        }
+      };
+      if (window.Spotify) {
+        initPlayer();
+      } else if (!document.getElementById("sp-sdk")) {
+        window.onSpotifyWebPlaybackSDKReady = initPlayer;
+        const script = document.createElement("script");
+        script.id = "sp-sdk";
+        script.src = "https://sdk.scdn.co/spotify-player.js";
+        script.onerror = () =>
+          console.warn("Spotify SDK failed to load (expected in CodeSandbox)");
+        document.head.appendChild(script);
+      } else {
+        window.onSpotifyWebPlaybackSDKReady = initPlayer;
+      }
+    } catch (e) {
+      console.warn("Spotify setup failed:", e.message);
     }
   }, [spToken]);
 
