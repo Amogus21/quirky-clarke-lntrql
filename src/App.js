@@ -896,7 +896,7 @@ export default function StudyPlan() {
     const t = await getSpAccess();
     if (!t) return;
     const res = await fetch(
-      `https://api.spotify.com/v1/playlists/${pl.id}/tracks?limit=50&fields=items(track(id,name,uri,duration_ms,artists,album(name,images)))`,
+      `https://api.spotify.com/v1/playlists/${pl.id}/tracks?limit=50`,
       { headers: { Authorization: `Bearer ${t}` } }
     );
     if (!res.ok) {
