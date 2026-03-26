@@ -686,6 +686,11 @@ export default function StudyPlan() {
       ls.set("gcse_dark", !d);
       return !d;
     });
+  const [checklistItems, setChecklistItems] = useState(() =>
+    ls.get("gcse_checklist", [])
+  );
+  const [checklistInput, setChecklistInput] = useState("");
+  const [checklistDate, setChecklistDate] = useState(getTodayKey());
 
   const [spToken, setSpToken] = useState(() => ls.get("sp_token", null));
   const [spPlayer, setSpPlayer] = useState(null);
@@ -694,7 +699,10 @@ export default function StudyPlan() {
   const [spTrack, setSpTrack] = useState(null);
   const [spProgress, setSpProgress] = useState(0);
   const [spDuration, setSpDuration] = useState(0);
-  const [spVolume, setSpVolume] = useState(0.5);
+  const [spVolume, setSpVolume] = useState(() => ls.get("sp_volume", 0.5));
+  const [spLastTrack, setSpLastTrack] = useState(() =>
+    ls.get("sp_last_track", null)
+  );
   const [spSearch, setSpSearch] = useState("");
   const [spResults, setSpResults] = useState([]);
   const [spSearching, setSpSearching] = useState(false);
@@ -786,13 +794,29 @@ export default function StudyPlan() {
           player.addListener("ready", ({ device_id }) => {
             setSpDeviceId(device_id);
             setSpReady(true);
+            // Restore volume
+            player.setVolume(ls.get("sp_volume", 0.5));
+            // Restore last track info for display
+            const last = ls.get("sp_last_track", null);
+            if (last?.track) {
+              setSpTrack(last.track);
+              setSpDuration(last.duration || 0);
+              setSpProgress(last.position || 0);
+            }
           });
           player.addListener("player_state_changed", (state) => {
             if (!state) return;
-            setSpTrack(state.track_window.current_track);
+            const track = state.track_window.current_track;
+            setSpTrack(track);
             setSpPlaying(!state.paused);
             setSpProgress(state.position);
             setSpDuration(state.duration);
+            ls.set("sp_last_track", {
+              track,
+              position: state.position,
+              duration: state.duration,
+              paused: state.paused,
+            });
           });
           player.connect();
           setSpPlayer(player);
@@ -872,6 +896,7 @@ export default function StudyPlan() {
   const spPrev = () => spPlayer?.previousTrack();
   const spSetVol = (v) => {
     setSpVolume(v);
+    ls.set("sp_volume", v);
     spPlayer?.setVolume(v);
   };
   const spLogout = () => {
@@ -1092,11 +1117,15 @@ export default function StudyPlan() {
     (async () => {
       setSyncing(true);
       const remote = await sbGetAll(session.access_token, session.user.id);
-      ["gcse_todo", "gcse_topics", "gcse_streak", "gcse_tutor_logs"].forEach(
-        (key) => {
-          if (!(key in remote)) ls.del(key);
-        }
-      );
+      [
+        "gcse_todo",
+        "gcse_topics",
+        "gcse_streak",
+        "gcse_tutor_logs",
+        "gcse_checklist",
+      ].forEach((key) => {
+        if (!(key in remote)) ls.del(key);
+      });
       Object.entries(remote).forEach(([key, value]) => {
         if (key === "gcse_timer_state" || key === "gcse_sw_state") return;
         ls.set(key, value);
@@ -1116,7 +1145,7 @@ export default function StudyPlan() {
           lunch: 0,
         })
       );
-      setSessionSubjects(ls.get("gcse_session_subjects_" + getTodayKey(), {}));
+      setChecklistItems(ls.get("gcse_checklist", []));
       setSyncing(false);
       setSyncStatus("synced");
       setTimeout(() => setSyncStatus(""), 3000);
@@ -1564,6 +1593,7 @@ export default function StudyPlan() {
                 ["tracker", "Topics"],
                 ["tutor", "Tutor Log"],
                 ["notes", "Notes"],
+                ["checklist", "Checklist"],
                 ["resources", "Resources"],
                 ["motivation", "Motivation"],
                 ["spotify", "♫ Spotify"],
@@ -3160,21 +3190,491 @@ export default function StudyPlan() {
           </div>
         )}
 
+        {/* CHECKLIST */}
+        {view === "checklist" &&
+          (() => {
+            const saveChecklist = (items) => {
+              setChecklistItems(items);
+              syncSet("gcse_checklist", items);
+            };
+            const addItem = () => {
+              if (!checklistInput.trim()) return;
+              const item = {
+                id: Date.now(),
+                text: checklistInput.trim(),
+                date: checklistDate,
+                done: false,
+              };
+              saveChecklist([...checklistItems, item]);
+              setChecklistInput("");
+            };
+            const toggleItem = (id) =>
+              saveChecklist(
+                checklistItems.map((i) =>
+                  i.id === id ? { ...i, done: !i.done } : i
+                )
+              );
+            const deleteItem = (id) =>
+              saveChecklist(checklistItems.filter((i) => i.id !== id));
+
+            // Calendar: show 4 weeks from today
+            const todayD = new Date();
+            todayD.setHours(0, 0, 0, 0);
+            const startOfWeek = new Date(todayD);
+            startOfWeek.setDate(todayD.getDate() - todayD.getDay() + 1); // Monday
+            const weeks = [];
+            for (let w = 0; w < 5; w++) {
+              const week = [];
+              for (let d = 0; d < 7; d++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + w * 7 + d);
+                week.push(day);
+              }
+              weeks.push(week);
+            }
+
+            const fmtKey = (d) =>
+              `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+                2,
+                "0"
+              )}-${String(d.getDate()).padStart(2, "0")}`;
+            const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+            // Group undated / overdue items separately
+            const undone = checklistItems.filter((i) => !i.done);
+            const done = checklistItems.filter((i) => i.done);
+
+            return (
+              <div style={{ maxWidth: 900 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: M ? "1fr" : "1fr 340px",
+                    gap: 16,
+                    alignItems: "start",
+                  }}
+                >
+                  {/* Calendar */}
+                  <div style={{ ...card(), padding: 20 }}>
+                    <div style={sh}>Calendar View</div>
+                    {/* Day headers */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(7,1fr)",
+                        gap: 3,
+                        marginBottom: 4,
+                      }}
+                    >
+                      {dayNames.map((d) => (
+                        <div
+                          key={d}
+                          style={{
+                            fontFamily: mono,
+                            fontSize: 9,
+                            color: txt3,
+                            textAlign: "center",
+                            padding: "4px 0",
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                          }}
+                        >
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+                    {weeks.map((week, wi) => (
+                      <div
+                        key={wi}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(7,1fr)",
+                          gap: 3,
+                          marginBottom: 3,
+                        }}
+                      >
+                        {week.map((day) => {
+                          const key = fmtKey(day);
+                          const isToday = key === getTodayKey();
+                          const isPast = day < todayD;
+                          const dayItems = checklistItems.filter(
+                            (i) => i.date === key
+                          );
+                          const undoneItems = dayItems.filter((i) => !i.done);
+                          const doneItems = dayItems.filter((i) => i.done);
+                          return (
+                            <div
+                              key={key}
+                              onClick={() => setChecklistDate(key)}
+                              style={{
+                                minHeight: 64,
+                                padding: "5px 6px",
+                                borderRadius: 5,
+                                border:
+                                  checklistDate === key
+                                    ? `2px solid ${accentBg}`
+                                    : `1px solid ${border1}`,
+                                background: isToday ? surface3 : surface2,
+                                cursor: "pointer",
+                                position: "relative",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontFamily: mono,
+                                  fontSize: 10,
+                                  fontWeight: isToday ? 700 : 400,
+                                  color: isToday
+                                    ? accentBg
+                                    : isPast
+                                    ? txt3
+                                    : txt1,
+                                  marginBottom: 3,
+                                }}
+                              >
+                                {day.getDate()}
+                              </div>
+                              {undoneItems.map((item) => (
+                                <div
+                                  key={item.id}
+                                  style={{
+                                    fontFamily: sans,
+                                    fontSize: 9,
+                                    color: txt2,
+                                    background: surface,
+                                    borderRadius: 2,
+                                    padding: "1px 4px",
+                                    marginBottom: 2,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  • {item.text}
+                                </div>
+                              ))}
+                              {doneItems.length > 0 && (
+                                <div
+                                  style={{
+                                    fontFamily: mono,
+                                    fontSize: 8,
+                                    color: txt3,
+                                  }}
+                                >
+                                  +{doneItems.length} done
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Task list + add */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    {/* Add task */}
+                    <div style={{ ...card(), padding: 18 }}>
+                      <div style={sh}>Add Task</div>
+                      <div style={{ marginBottom: 10 }}>
+                        <div
+                          style={{
+                            fontFamily: mono,
+                            fontSize: 9,
+                            color: txt3,
+                            letterSpacing: "1px",
+                            textTransform: "uppercase",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Date
+                        </div>
+                        <input
+                          type="date"
+                          value={checklistDate}
+                          onChange={(e) => setChecklistDate(e.target.value)}
+                          style={{
+                            width: "100%",
+                            background: surface2,
+                            border: `1px solid ${border1}`,
+                            borderRadius: 4,
+                            padding: "8px 10px",
+                            fontSize: 12,
+                            fontFamily: mono,
+                            color: txt1,
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 10 }}>
+                        <div
+                          style={{
+                            fontFamily: mono,
+                            fontSize: 9,
+                            color: txt3,
+                            letterSpacing: "1px",
+                            textTransform: "uppercase",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Task
+                        </div>
+                        <input
+                          value={checklistInput}
+                          onChange={(e) => setChecklistInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && addItem()}
+                          placeholder="e.g. Complete Bio past paper"
+                          style={{
+                            width: "100%",
+                            background: surface2,
+                            border: `1px solid ${border1}`,
+                            borderRadius: 4,
+                            padding: "8px 10px",
+                            fontSize: 13,
+                            fontFamily: sans,
+                            color: txt1,
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={addItem}
+                        style={{
+                          ...pill(true),
+                          width: "100%",
+                          padding: "9px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        + Add Task
+                      </button>
+                    </div>
+
+                    {/* Tasks for selected date */}
+                    <div style={{ ...card(), padding: 18 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 14,
+                        }}
+                      >
+                        <div style={sh}>
+                          {(() => {
+                            const [y, m, d] = checklistDate
+                              .split("-")
+                              .map(Number);
+                            return new Date(y, m - 1, d).toLocaleDateString(
+                              "en-GB",
+                              {
+                                weekday: "long",
+                                day: "numeric",
+                                month: "short",
+                              }
+                            );
+                          })()}
+                        </div>
+                      </div>
+                      {checklistItems.filter((i) => i.date === checklistDate)
+                        .length === 0 ? (
+                        <div
+                          style={{
+                            fontFamily: sans,
+                            fontSize: 12,
+                            color: txt3,
+                            textAlign: "center",
+                            padding: "16px 0",
+                          }}
+                        >
+                          No tasks for this day
+                        </div>
+                      ) : (
+                        checklistItems
+                          .filter((i) => i.date === checklistDate)
+                          .map((item) => (
+                            <div
+                              key={item.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                padding: "8px 0",
+                                borderBottom: `1px solid ${border1}`,
+                              }}
+                            >
+                              <div
+                                onClick={() => toggleItem(item.id)}
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  flexShrink: 0,
+                                  borderRadius: 3,
+                                  border: `1.5px solid ${
+                                    item.done ? accentBg : border2
+                                  }`,
+                                  background: item.done
+                                    ? accentBg
+                                    : "transparent",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {item.done && (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      color: accentTx,
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                style={{
+                                  fontFamily: sans,
+                                  fontSize: 13,
+                                  flex: 1,
+                                  color: item.done ? txt3 : txt1,
+                                  textDecoration: item.done
+                                    ? "line-through"
+                                    : "none",
+                                }}
+                              >
+                                {item.text}
+                              </span>
+                              <button
+                                onClick={() => deleteItem(item.id)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: txt3,
+                                  cursor: "pointer",
+                                  fontSize: 15,
+                                  padding: 0,
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    {/* All upcoming undone */}
+                    {undone.filter((i) => i.date !== checklistDate).length >
+                      0 && (
+                      <div style={{ ...card(), padding: 18 }}>
+                        <div style={sh}>All Upcoming</div>
+                        {undone
+                          .filter((i) => i.date !== checklistDate)
+                          .sort((a, b) => a.date.localeCompare(b.date))
+                          .map((item) => (
+                            <div
+                              key={item.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                padding: "7px 0",
+                                borderBottom: `1px solid ${border1}`,
+                              }}
+                            >
+                              <div
+                                onClick={() => toggleItem(item.id)}
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  flexShrink: 0,
+                                  borderRadius: 3,
+                                  border: `1.5px solid ${border2}`,
+                                  background: "transparent",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div
+                                  style={{
+                                    fontFamily: sans,
+                                    fontSize: 12,
+                                    color: txt1,
+                                  }}
+                                >
+                                  {item.text}
+                                </div>
+                                <div
+                                  style={{
+                                    fontFamily: mono,
+                                    fontSize: 10,
+                                    color: txt3,
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {(() => {
+                                    const [y, m, d] = item.date
+                                      .split("-")
+                                      .map(Number);
+                                    return new Date(
+                                      y,
+                                      m - 1,
+                                      d
+                                    ).toLocaleDateString("en-GB", {
+                                      weekday: "short",
+                                      day: "numeric",
+                                      month: "short",
+                                    });
+                                  })()}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => deleteItem(item.id)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: txt3,
+                                  cursor: "pointer",
+                                  fontSize: 15,
+                                  padding: 0,
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
         {/* MOTIVATION */}
         {view === "motivation" && (
           <div style={{ maxWidth: 720 }}>
             {MOTIVATION_TIPS.map((tip, i) => (
               <div
                 key={i}
-                onClick={() => toggleTip(i)}
                 style={{
                   ...card(),
                   padding: 18,
                   marginBottom: 8,
-                  cursor: "pointer",
-                  borderLeft: checkedTips[i]
-                    ? `3px solid ${accentBg}`
-                    : `3px solid ${border1}`,
                   display: "flex",
                   gap: 14,
                   alignItems: "flex-start",
@@ -3205,30 +3705,6 @@ export default function StudyPlan() {
                   >
                     {tip.body}
                   </div>
-                </div>
-                <div
-                  style={{
-                    width: 16,
-                    height: 16,
-                    flexShrink: 0,
-                    marginTop: 2,
-                    borderRadius: 3,
-                    border: `1.5px solid ${
-                      checkedTips[i] ? accentBg : border2
-                    }`,
-                    background: checkedTips[i] ? accentBg : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {checkedTips[i] && (
-                    <span
-                      style={{ fontSize: 9, color: accentTx, fontWeight: 700 }}
-                    >
-                      ✓
-                    </span>
-                  )}
                 </div>
               </div>
             ))}
@@ -4087,7 +4563,7 @@ export default function StudyPlan() {
               "Topics",
             ],
             [
-              "tutor",
+              "checklist",
               <svg
                 width="20"
                 height="20"
@@ -4098,29 +4574,13 @@ export default function StudyPlan() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+                <line x1="8" y1="16" x2="12" y2="16" />
               </svg>,
-              "Tutor",
-            ],
-            [
-              "notes",
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>,
-              "Notes",
+              "Tasks",
             ],
             [
               "spotify",
@@ -4161,16 +4621,16 @@ export default function StudyPlan() {
             ],
           ].map(([v, icon, label]) => {
             const isMore = v === "more";
-            const isActive = isMore
-              ? ["resources", "motivation"].includes(view)
-              : view === v;
+            const moreViews = ["tutor", "notes", "resources", "motivation"];
+            const isActive = isMore ? moreViews.includes(view) : view === v;
             return (
               <button
                 key={v}
                 onClick={() => {
-                  if (isMore)
-                    setView(view === "resources" ? "motivation" : "resources");
-                  else setView(v);
+                  if (isMore) {
+                    const idx = moreViews.indexOf(view);
+                    setView(moreViews[(idx + 1) % moreViews.length]);
+                  } else setView(v);
                 }}
                 style={{
                   flex: 1,
@@ -4195,7 +4655,11 @@ export default function StudyPlan() {
                     letterSpacing: "0.5px",
                   }}
                 >
-                  {label}
+                  {isMore
+                    ? moreViews.includes(view)
+                      ? view.charAt(0).toUpperCase() + view.slice(1)
+                      : "More"
+                    : label}
                 </span>
               </button>
             );
