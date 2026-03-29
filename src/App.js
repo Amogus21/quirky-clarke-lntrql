@@ -193,20 +193,30 @@ const SUBJECT_TOPICS = {
 };
 
 const DAILY_SCHEDULE = [
-  { time: "9:20-10:05", task: "Session - 1", type: "study" },
-  { time: "10:05-10:20", task: "Break - 1", type: "break" },
-  { time: "10:20-11:05", task: "Session - 2", type: "study" },
-  { time: "11:05-11:20", task: "Break - 2", type: "break" },
-  { time: "11:20-12:05", task: "Session - 3", type: "study" },
-  { time: "12:05-12:20", task: "Break - 3", type: "break" },
-  { time: "12:20-1:05", task: "Session - 4", type: "study" },
-  { time: "1:05-2:05", task: "Lunch", type: "lunch" },
-  { time: "2:05-2:50", task: "Session - 5", type: "study" },
-  { time: "2:50-3:05", task: "Break - 4", type: "break" },
-  { time: "3:05-3:50", task: "Session - 6", type: "study" },
-  { time: "3:50-4:05", task: "Break - 5", type: "break" },
-  { time: "4:05-4:50", task: "Session - 7", type: "study" },
-  { time: "4:50+", task: "Study done. Evening is yours.", type: "done" },
+  { time: "9:00-9:45", task: "Session - 1", type: "study" },
+  { time: "9:45-10:00", task: "Break - 1", type: "break" },
+  { time: "10:00-10:45", task: "Session - 2", type: "study" },
+  { time: "10:45-11:00", task: "Break - 2", type: "break" },
+  { time: "11:00-11:45", task: "Session - 3", type: "study" },
+  { time: "11:45-12:00", task: "Break - 3", type: "break" },
+  { time: "12:00-12:45", task: "Session - 4", type: "study" },
+  { time: "12:45-1:45", task: "Lunch", type: "lunch" },
+  { time: "1:45-2:30", task: "Session - 5", type: "study" },
+  { time: "2:30-2:45", task: "Break - 4", type: "break" },
+  { time: "2:45-3:30", task: "Session - 6", type: "study" },
+  { time: "3:30-3:45", task: "Break - 5", type: "break" },
+  { time: "3:45-4:30", task: "Session - 7", type: "study" },
+  { time: "4:30-4:45", task: "Break - 6", type: "break" },
+  { time: "4:45-5:30", task: "Session - 8", type: "study" },
+  { time: "5:30-5:45", task: "Break - 7", type: "break" },
+  { time: "5:45-6:30", task: "Session - 9", type: "study" },
+  { time: "6:30-6:45", task: "Break - 8", type: "break" },
+  { time: "6:45-7:30", task: "Session - 10", type: "study" },
+  { time: "7:30-7:45", task: "Break - 9", type: "break" },
+  { time: "7:45-8:30", task: "Session - 11", type: "study" },
+  { time: "8:30-8:45", task: "Break - 10", type: "break" },
+  { time: "8:45-9:30", task: "Session - 12", type: "study" },
+  { time: "9:30+", task: "Study done. Evening is yours.", type: "done" },
 ];
 
 const RESOURCES = [
@@ -346,6 +356,16 @@ const TODO_ITEMS = [
   { id: "t20", section: "STUDY", label: "Session - 6", detail: "" },
   { id: "t21", section: "STUDY", label: "Break - 5", detail: "" },
   { id: "t22", section: "STUDY", label: "Session - 7", detail: "" },
+  { id: "t23s", section: "STUDY", label: "Break - 6", detail: "" },
+  { id: "t24s", section: "STUDY", label: "Session - 8", detail: "" },
+  { id: "t25s", section: "STUDY", label: "Break - 7", detail: "" },
+  { id: "t26s", section: "STUDY", label: "Session - 9", detail: "" },
+  { id: "t27s", section: "STUDY", label: "Break - 8", detail: "" },
+  { id: "t28s", section: "STUDY", label: "Session - 10", detail: "" },
+  { id: "t29s", section: "STUDY", label: "Break - 9", detail: "" },
+  { id: "t30s", section: "STUDY", label: "Session - 11", detail: "" },
+  { id: "t31s", section: "STUDY", label: "Break - 10", detail: "" },
+  { id: "t32s", section: "STUDY", label: "Session - 12", detail: "" },
   {
     id: "t23",
     section: "EVENING",
@@ -1710,7 +1730,7 @@ export default function StudyPlan() {
           { v: streak ? `🔥 ${streak}` : "0", l: "Day streak" },
           { v: `${doneTopics}/${totalTopics}`, l: `Topics · ${topicsPct}%` },
           { v: `${totalDone}/${TODO_ITEMS.length}`, l: "Tasks today" },
-          { v: `${sessionCounts.study || 0}/7`, l: "Sessions" },
+          { v: `${sessionCounts.study || 0}/12`, l: "Sessions" },
         ].map((s, i) => (
           <div
             key={i}
@@ -2026,7 +2046,7 @@ export default function StudyPlan() {
                     gap: 10,
                   }}
                 >
-                  {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
                     <div
                       key={n}
                       style={{
@@ -2309,8 +2329,8 @@ export default function StudyPlan() {
                   }}
                 >
                   {[
-                    { l: "Sessions", k: "study", tg: 7 },
-                    { l: "Breaks", k: "break", tg: 5 },
+                    { l: "Sessions", k: "study", tg: 12 },
+                    { l: "Breaks", k: "break", tg: 10 },
                     { l: "Lunch", k: "lunch", tg: 1 },
                   ].map(({ l, k, tg }, i) => (
                     <div
